@@ -1,0 +1,875 @@
+<title>СРС-навигатор</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@600;700&display=swap">
+<style>
+/* Layout: sticky top bar, one centred column (max 1040px); task list as rows; task page is a stepper with a side column of materials. */
+:root{
+  --bg:#f1f4f6; --surface:#ffffff; --ink:#15212c; --muted:#58697a; --line:#d7dee5;
+  --accent:#0d6b6f; --accent-ink:#ffffff; --accent-soft:#dcefef;
+  --ok-fg:#1c7447; --ok-bg:#dff3e7; --warn-fg:#8f5b00; --warn-bg:#fbeed0;
+  --bad-fg:#a8322b; --bad-bg:#fbe3e0; --info-fg:#2a5aa3; --info-bg:#e1eaf8; --none-fg:#58697a; --none-bg:#e8edf1;
+  --c2:#b45309;
+  --serif:"Noto Serif",Georgia,"Times New Roman",serif; --sans:"Noto Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e161d; --surface:#16212b; --ink:#e5ecf2; --muted:#9aabba; --line:#2a3846;
+  --accent:#5cc0c3; --accent-ink:#07282a; --accent-soft:#143a3c; --c2:#f0a35a;
+  --ok-fg:#6fd19b; --ok-bg:#17352a; --warn-fg:#f0b95a; --warn-bg:#3a2d12;
+  --bad-fg:#ff948b; --bad-bg:#3d1c19; --info-fg:#8db4ee; --info-bg:#18283f; --none-fg:#9aabba; --none-bg:#222f3b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e161d; --surface:#16212b; --ink:#e5ecf2; --muted:#9aabba; --line:#2a3846;
+  --accent:#5cc0c3; --accent-ink:#07282a; --accent-soft:#143a3c; --c2:#f0a35a;
+  --ok-fg:#6fd19b; --ok-bg:#17352a; --warn-fg:#f0b95a; --warn-bg:#3a2d12;
+  --bad-fg:#ff948b; --bad-bg:#3d1c19; --info-fg:#8db4ee; --info-bg:#18283f; --none-fg:#9aabba; --none-bg:#222f3b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--surface);z-index:30}
+.wrap{max-width:1040px;margin:0 auto;padding-block:0 56px}
+h1,h2,h3{font-family:var(--serif);line-height:1.25;margin:0;text-wrap:balance}
+h2{font-size:22px} h3{font-size:18px} h4{font-size:12px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-family:var(--sans);font-weight:600}
+p{margin:0}
+a{color:var(--accent)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px))) calc(-1*max(16px,env(safe-area-inset-right,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+.top-in{max-width:1040px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding-block:10px}
+.brand{display:flex;flex-direction:column;min-width:0;margin-right:auto}
+.brand b{font-family:var(--serif);font-size:18px}
+.brand span{font-size:12px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tabs{display:flex;gap:2px;width:100%;overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:9px 14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.badge{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:12px;text-align:center}
+.demo{background:var(--info-bg);color:var(--info-fg);padding:8px 12px;border-radius:8px;margin-top:16px;font-size:13px}
+main{display:flex;flex-direction:column;gap:20px;padding-top:20px}
+.head{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.head p{color:var(--muted);max-width:60ch}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px}
+.stat{display:flex;flex-direction:column}
+.stat b{font-family:var(--serif);font-size:24px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.bar{height:6px;background:var(--none-bg);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.group-t{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:8px}
+.group-t span{font-size:13px;color:var(--muted)}
+.rows{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.row{display:grid;grid-template-columns:34px 1fr auto auto 64px;gap:4px 14px;align-items:center;padding:12px 14px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;width:100%}
+.row:first-child{border-top:0}
+button.row:hover{background:var(--accent-soft)}
+.row .n{font-family:var(--serif);font-weight:700;color:var(--muted);font-size:18px;font-variant-numeric:tabular-nums}
+.row .t{min-width:0}
+.row .t b{display:block;font-weight:600}
+.row .t small{color:var(--muted);display:block}
+.row .due{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.row .due.late{color:var(--bad-fg);font-weight:600}
+.row .sc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+@media (max-width:640px){.row{grid-template-columns:28px 1fr auto}.row .due{grid-column:2}.row .sc{grid-column:3;grid-row:2}.row .chip{grid-column:3;grid-row:1}}
+.chip{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap}
+.s-new{background:var(--none-bg);color:var(--none-fg)} .s-draft{background:var(--info-bg);color:var(--info-fg)}
+.s-submitted{background:var(--warn-bg);color:var(--warn-fg)} .s-returned{background:var(--bad-bg);color:var(--bad-fg)} .s-graded{background:var(--ok-bg);color:var(--ok-fg)}
+.back{border:0;background:transparent;color:var(--accent);font-weight:600;padding:0;align-self:flex-start}
+.cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px;align-items:start}
+@media (max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.stepper{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.stepper button{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;padding:0 2px;min-width:44px;color:var(--muted);font-size:11px}
+.stepper .dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:2px solid var(--line);background:var(--surface);font-variant-numeric:tabular-nums}
+.stepper .done .dot{background:var(--ok-bg);border-color:var(--ok-fg);color:var(--ok-fg)}
+.stepper .cur .dot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.stepper .cur{color:var(--ink);font-weight:600}
+.stepper button:disabled{opacity:.5;cursor:not-allowed}
+.stephead{display:flex;flex-direction:column;gap:4px}
+.stephead .kick{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--bg)}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{margin-top:5px;accent-color:var(--accent)}
+.opt ul{margin:4px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
+.opt b{display:block}
+.crit{border-left:3px solid var(--accent);padding-left:12px}
+.lit{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.links{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.links a{overflow-wrap:anywhere}
+details summary{cursor:pointer;font-weight:600}
+details > :not(summary){margin-top:8px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+label.f input,label.f textarea,.in{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;font-weight:400;color:var(--ink);width:100%}
+textarea{resize:vertical;min-height:150px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:9px 18px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.bad{border-color:var(--bad-fg);color:var(--bad-fg);background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--muted);font-size:13px}
+.checks{display:flex;flex-direction:column;gap:8px}
+.checks label{display:flex;gap:10px;font-size:14px;cursor:pointer}
+.checks input{accent-color:var(--accent);margin-top:4px}
+.recap{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.recap li{display:flex;gap:8px}
+.recap .ok{color:var(--ok-fg);font-weight:700}.recap .no{color:var(--bad-fg);font-weight:700}
+.res{display:flex;flex-direction:column;gap:8px}
+.res .big{display:flex;align-items:baseline;gap:10px}
+.res .big b{font-family:var(--serif);font-size:34px;font-variant-numeric:tabular-nums}
+.crow{display:grid;grid-template-columns:minmax(0,1fr) 70px;gap:2px 10px;font-size:13px;align-items:center}
+.crow .bar{grid-column:1/-1}
+.crow span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:center;font-size:13px;white-space:nowrap}
+th{color:var(--muted);font-weight:600;background:var(--surface)}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
+tr:last-child td{border-bottom:0}
+td button.cell{border:0;border-radius:6px;padding:3px 8px;min-width:40px;font-weight:600}
+input[type=date]{width:auto}
+.rub{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:8px 12px;align-items:center}
+.rub input{text-align:right}
+.total{display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:40;max-width:90vw;font-size:14px}
+.scale{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;font-size:13px}
+.scale div{background:var(--bg);border-radius:6px;padding:6px 8px}
+ul.plain{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.dt{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.dt table{min-width:100%}
+.dt th{font-size:12px;white-space:normal;min-width:96px}
+.dt td{padding:4px 6px}
+.dt input{width:100%;min-width:72px;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums}
+.dt input.txt{text-align:left}
+.dt td.calc{color:var(--muted);text-align:right;font-style:italic}
+.dt td.x button{border:0;background:transparent;color:var(--muted);font-size:16px;padding:2px 6px}
+.dt th:first-child,.dt td:first-child{position:static}
+.chartbox{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px}
+.chartbox svg{display:block;width:100%;height:auto;max-width:100%}
+.an{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:3px}
+.sub{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.sub input{margin-top:5px;accent-color:var(--accent)}
+.tbhead{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.btn.sm{padding:5px 12px;font-size:13px}
+.tips{background:var(--accent-soft);border-radius:10px;padding:12px 14px}
+.tips summary{font-weight:700}
+.tips h5{margin:10px 0 4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tips .err{margin-top:10px;background:var(--warn-bg);color:var(--warn-fg);border-radius:8px;padding:8px 10px;font-size:14px}
+.tips .err b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .3s}}
+.imgrow{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:start}.imgrow img{width:120px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+@media(max-width:520px){.imgrow{grid-template-columns:1fr}}
+</style>
+
+<div id="app"><div class="wrap"><p class="empty">…</p></div></div>
+
+<script>
+const DATA = {"tasks": [{"n": 1, "hours": 2, "kk": {"title": "Дыбыс деңгейін сипаттайтын функцияны талдау", "crit": "Дыбыс деңгейін сипаттайтын функцияларды талдайды, экстремум нүктелерін табады және монотондылық аралықтарын анықтайды.", "plan": ["Тақырыпқа кіріспе: дыбыс көлемінің функциясын анықтау.", "Дыбыс қаттылығы функциясының графигін құру.", "Функцияның өсу және кему аралықтарын талдау.", "Функцияның экстремумдарын анықтау.", "Алынған білімді практикада қолдану."], "forms": [{"h": "Графикалық талдау", "i": ["Дыбыс көлемі (амплитудасы) немесе дыбыс биіктігі сияқты музыкалық сигналдарды сипаттайтын функцияларды сызу.", "Монотондылықты, экстремумдарды және анықтау салаларын талдау."]}, {"h": "Практикалық зерттеу", "i": ["Дыбыс толқынын сипаттайтын функцияны табыңыз (мысалы, гармоникалық тербеліс) және оның қасиеттерін сипаттаңыз."]}, {"h": "Презентация", "i": ["Функция қасиеттерінің дыбыс сипаттамаларының өзгеруімен байланысы туралы презентация дайындаңыз."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н., Кашкаров П. А. \" Тербеліс және толқындық процестер теориясының негіздері \""]}, "ru": {"title": "Анализ функции, описывающей уровень громкости", "crit": "Анализирует функции, описывающие уровень громкости, находит точки экстремума и определяет промежутки монотонности.", "plan": ["Введение в тему: определить функцию громкости звука.", "Построить график функции громкости звука.", "Проанализировать промежутки возрастания и убывания функции.", "Определить экстремумы функции.", "Применить полученные знания на практике."], "forms": [{"h": "Графический анализ", "i": ["Построить графики функций, описывающих музыкальные сигналы, например громкость (амплитуду) или высоту звука.", "Проанализировать монотонность, экстремумы и области определения."]}, {"h": "Практическое исследование", "i": ["Найти функцию, описывающую звуковую волну (например, гармоническое колебание), и описать её свойства."]}, {"h": "Презентация", "i": ["Подготовить презентацию о связи свойств функции с изменением характеристик звука."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, П.А. Кашкаров. «Основы теории колебательных и волновых процессов»."]}, "links": {"ru": [{"t": "Громкость звука — Википедия", "u": "https://ru.wikipedia.org/wiki/Громкость_звука"}, {"t": "Возрастание, убывание и экстремумы функции — конспект с примерами", "u": "http://www.mathprofi.ru/vozrastanie_ubyvanie_ekstremumy_funkcii.html"}, {"t": "Desmos — графический калькулятор (построение графиков онлайн)", "u": "https://www.desmos.com/calculator"}], "kk": [{"t": "Функцияның сындық және экстремум нүктелері: анықтамалар мен табу алгоритмі", "u": "https://stud.kz/prezentatsiya/id/41340"}, {"t": "Функцияның экстремумдері мен сындық нүктелерін туынды таңбасымен анықтау", "u": "https://stud.kz/prezentatsiya/id/27882"}, {"t": "Desmos — графиктерді онлайн құру", "u": "https://www.desmos.com/calculator"}]}, "hints": {"ru": [{"how": ["Выберите простую модель: A(t) — громкость звука в момент t. Например, A(t) = −t² + 6t (громкость нарастает и спадает) или огибающая реальной ноты.", "Запишите, что откладывается по осям: время t (с) и громкость A (дБ или условные единицы), а также область определения."], "err": "Не указаны единицы измерения и область определения."}, {"how": ["Составьте таблицу значений A(t) минимум для 8–10 точек и отметьте их в Desmos или GeoGebra.", "Подпишите оси и приложите ссылку на график или описание его вида."], "err": "График построен без подписей осей и без масштаба."}, {"how": ["Найдите производную A′(t) и решите неравенства A′(t) > 0 и A′(t) < 0.", "Запишите промежутки словами: «громкость растёт на (0; 3), убывает на (3; 6)»."], "err": "Путают знак производной со знаком самой функции."}, {"how": ["Решите A′(t) = 0 и проверьте, меняет ли A′ знак слева и справа от найденной точки.", "Найдите значение A в точке максимума и объясните, что это за момент в музыке (пик звука)."], "err": "Берут точку, где A′ = 0, но не проверяют смену знака."}, {"how": ["Возьмите динамику из своей партии (crescendo, diminuendo) и сопоставьте её с графиком.", "Сделайте вывод в 2–3 предложениях: где громкость нарастает и где пик."], "err": "Вывод не связан с музыкой, остаются одни формулы."}], "kk": [{"how": ["Қарапайым модель таңдаңыз: A(t) — t уақыт мезетіндегі дыбыс қаттылығы. Мысалы, A(t) = −t² + 6t (қаттылық өсіп, кейін төмендейді) немесе нақты ноталық дыбыстың қисығы.", "Осьтерде не көрсетілетінін жазыңыз: уақыт t (с) және қаттылық A (дБ немесе шартты бірлік), сондай-ақ анықталу облысын."], "err": "Өлшем бірліктері мен анықталу облысы көрсетілмейді."}, {"how": ["A(t) мәндерінің кестесін кемінде 8–10 нүкте үшін құрып, Desmos немесе GeoGebra-да белгілеңіз.", "Осьтерге қол қойып, графикке сілтеме немесе оның сипаттамасын қосыңыз."], "err": "График осьтердің атауларынсыз және масштабсыз салынады."}, {"how": ["A′(t) туындысын тауып, A′(t) > 0 және A′(t) < 0 теңсіздіктерін шешіңіз.", "Аралықтарды сөзбен жазыңыз: «қаттылық (0; 3) аралығында өседі, (3; 6) аралығында кемиді»."], "err": "Туынды таңбасын функцияның өз таңбасымен шатастырады."}, {"how": ["A′(t) = 0 теңдеуін шешіп, табылған нүктенің сол және оң жағында A′ таңбасы өзгеретінін тексеріңіз.", "Максимум нүктесіндегі A мәнін тауып, бұл музыкада қандай сәт екенін (дыбыс шыңы) түсіндіріңіз."], "err": "A′ = 0 нүктесін алады, бірақ таңба ауысуын тексермейді."}, {"how": ["Өз партияңыздағы динамиканы (crescendo, diminuendo) графикпен салыстырыңыз.", "2–3 сөйлеммен қорытынды жасаңыз: қаттылық қай жерде өседі, шың қайда."], "err": "Қорытынды музыкамен байланыспайды, тек формулалар қалады."}]}}, {"n": 2, "hours": 2, "kk": {"title": "Құралдарды теңшеу үшін тригонометриялық теңдеулерді шешу", "crit": "Тригонометриялық теңдеулерді шешеді және алынған білімді музыкалық аспаптарды баптау үшін қолданады.", "plan": ["Тригонометриялық теңдеулерге кіріспе.", "Тригонометриялық теңдеулерді шешу әдістері.", "Ішекті музыкалық аспаптарды баптау үшін теңдеулерді қолдану.", "Практикалық тапсырма: құралды тригонометриялық теңдеулермен реттеу."], "forms": [{"h": "Музыка негізінде есептерді шешу", "i": ["Дыбыстық сигналдардың фазалық ығысуларына сәйкес келетін бұрыштарды тауып, оны графикалық түрде көрсетіңіз."]}, {"h": "Проблемалық тапсырма", "i": ["Берілген фазалық бұрыштарда немесе амплитудада дыбыс жиілігін есептеңіз."]}, {"h": "Кейс-зерттеу", "i": ["Тригонометриялық теңдеулер қолданылатын музыкалық акустикадан есептерді талдау (мысалы, толқындарды қабаттастыру)."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н., Ю. М. Колягин \"Тригонометрия\""]}, "ru": {"title": "Тригонометрические уравнения для настройки инструментов", "crit": "Решает тригонометрические уравнения и применяет полученные знания для настройки музыкальных инструментов.", "plan": ["Введение в тригонометрические уравнения.", "Методы решения тригонометрических уравнений.", "Применение уравнений для настройки струнных музыкальных инструментов.", "Практическое задание: настроить инструмент с помощью тригонометрических уравнений."], "forms": [{"h": "Решение задач на музыкальной основе", "i": ["Найти углы, соответствующие фазовым сдвигам звуковых сигналов, и показать их графически."]}, {"h": "Проблемное задание", "i": ["Вычислить частоту звука при заданных фазовых углах или амплитуде."]}, {"h": "Кейс-исследование", "i": ["Разобрать задачи из музыкальной акустики, где применяются тригонометрические уравнения (например, наложение волн)."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, Ю.М. Колягин. «Тригонометрия»."]}, "links": {"ru": [{"t": "Решение тригонометрических уравнений — курс на Stepik", "u": "https://stepik.org/201440"}, {"t": "Тригонометрические функции — Википедия", "u": "https://ru.wikipedia.org/wiki/Тригонометрические_функции"}, {"t": "GeoGebra — графики, построения и геометрия онлайн", "u": "https://www.geogebra.org/graphing"}], "kk": [{"t": "Тригонометриялық теңдеулерді шешу. 10 сынып", "u": "https://infourok.ru/trigonometriyali-tedeulerdi-sheshu-sinip-913639.html"}, {"t": "Тригонометриялық теңдеулерді шешу әдістері мен практикалық жаттығулары", "u": "https://stud.kz/prezentatsiya/id/22063"}, {"t": "GeoGebra — графиктер мен геометриялық салуларды онлайн құру", "u": "https://www.geogebra.org/graphing"}]}, "hints": {"ru": [{"how": ["Выпишите простейшие уравнения sin x = a и cos x = a и условие |a| ≤ 1.", "Запомните модель ноты: y = A·sin(2πft + φ), где f — частота (Гц), φ — фаза."], "err": "Забывают, что при |a| > 1 уравнение sin x = a не имеет решений."}, {"how": ["Решите 2–3 уравнения, например sin x = 1/2 и cos 2x = 0, и запишите общую формулу (x = (−1)ᵏ·arcsin a + πk).", "Проверьте один из корней подстановкой."], "err": "Теряют серию корней или не пишут «k ∈ Z»."}, {"how": ["Нота Ля первой октавы: f = 440 Гц, период T = 1/440 с. Найдите моменты, когда sin(2π·440·t) = 0 (t = k/880).", "Если две струны звучат чуть по-разному, слышны биения с частотой |f₁ − f₂|: так настраивают по слуху."], "err": "Путают частоту и период."}, {"how": ["Выберите струну или ноту и составьте уравнение для фазового сдвига.", "Решите его и покажите ответ на единичной окружности или на графике."], "err": "В одной записи смешивают градусы и радианы."}], "kk": [{"how": ["sin x = a және cos x = a қарапайым теңдеулерін және |a| ≤ 1 шартын жазып алыңыз.", "Ноталық үлгіні есте сақтаңыз: y = A·sin(2πft + φ), мұндағы f — жиілік (Гц), φ — фаза."], "err": "|a| > 1 болғанда sin x = a теңдеуінің шешімі болмайтынын ұмытады."}, {"how": ["2–3 теңдеу шешіңіз, мысалы sin x = 1/2 және cos 2x = 0, жалпы формуласын жазыңыз (x = (−1)ᵏ·arcsin a + πk).", "Түбірлердің біреуін қою арқылы тексеріңіз."], "err": "Түбірлер қатарын жоғалтады немесе «k ∈ Z» деп жазбайды."}, {"how": ["Бірінші октавадағы Ля нотасы: f = 440 Гц, период T = 1/440 с. sin(2π·440·t) = 0 болатын сәттерді табыңыз (t = k/880).", "Екі ішек сәл өзгеше шықса, жиілігі |f₁ − f₂| болатын соғулар естіледі: аспапты құлақпен осылай баптайды."], "err": "Жиілік пен периодты шатастырады."}, {"how": ["Ішек немесе нотаны таңдап, фазалық ығысуға теңдеу құрыңыз.", "Оны шешіп, жауапты бірлік шеңберде немесе графикте көрсетіңіз."], "err": "Бір жазбада градус пен радианды араластырады."}]}}, {"n": 3, "hours": 2, "kk": {"title": "Дәрежелік функциялар арқылы дыбыстық эффектілерді модельдеу", "crit": "Дыбыстық эффектілерді модельдеу және дыбыстың сызықтық емес бұрмалануын талдау үшін дәрежелік функцияларды қолданады.", "plan": ["Дәрежелік функцияларға кіріспе.", "Дыбыстың сызықтық емес бұрмалануын сипаттау үшін дәрежелік функцияларды қолдану.", "Әр түрлі дыбыстық эффектілерді модельдеу.", "Практикалық тапсырма: дыбыстық эффект моделін құру."], "forms": [{"h": "Аналитикалық жұмыс", "i": ["Әр түрлі дыбыс деңгейлері бар дыбыстар үшін амплитудалық коэффициенттердің мәндерін есептеңіз (дәрежеде)."]}, {"h": "Практикалық жұмыс", "i": ["Функция ретінде дыбыс көлемінің қашықтыққа тәуелділігін құрыңыз."]}, {"h": "Шығармашылық жоба", "i": ["Дәрежелік функцияларды қолдана отырып, дыбыс деңгейінің шкаласын жасаңыз."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н.,Г. И. Архангельский \" Қарапайым функциялар \""]}, "ru": {"title": "Моделирование звуковых эффектов степенными функциями", "crit": "Применяет степенные функции для моделирования звуковых эффектов и анализа нелинейных искажений звука.", "plan": ["Введение в степенные функции.", "Применение степенных функций для описания нелинейных искажений звука.", "Моделирование различных звуковых эффектов.", "Практическое задание: построить модель звукового эффекта."], "forms": [{"h": "Аналитическая работа", "i": ["Вычислить значения амплитудных коэффициентов (в степени) для звуков с разными уровнями громкости."]}, {"h": "Практическая работа", "i": ["Построить зависимость громкости звука от расстояния как функцию."]}, {"h": "Творческий проект", "i": ["Составить шкалу уровней громкости с помощью степенных функций."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, Г.И. Архангельский. «Элементарные функции»."]}, "links": {"ru": [{"t": "Степенная функция — Википедия", "u": "https://ru.wikipedia.org/wiki/Степенная_функция"}, {"t": "Децибел — Википедия (логарифмическая шкала громкости)", "u": "https://ru.wikipedia.org/wiki/Децибел"}, {"t": "Desmos — графический калькулятор (построение графиков онлайн)", "u": "https://www.desmos.com/calculator"}], "kk": [{"t": "11-сынып: нақты көрсеткішті дәрежелік функцияның туындысы мен интегралы", "u": "https://stud.kz/sabak-zhospary/id/5954"}, {"t": "Физика және музыка: тербелістер, толқындар және акустика негіздері", "u": "https://stud.kz/prezentatsiya/id/30149"}, {"t": "Desmos — графиктерді онлайн құру", "u": "https://www.desmos.com/calculator"}]}, "hints": {"ru": [{"how": ["Повторите свойства y = xⁿ для чётных и нечётных n и постройте y = x, y = x², y = x³ на одном графике.", "Объясните, чем график x³ отличается от x²."], "err": "Путают степенную функцию (xⁿ) с показательной (aˣ)."}, {"how": ["Идеальное усиление линейно: y = k·x. Искажение появляется, когда добавляется нелинейный член: y = x + a·x³.", "Подставьте x = 0,5; 1; 1,5 и сравните выходы при a = 0 и a = 0,2."], "err": "Не сравнивают с линейным случаем, поэтому искажение не видно."}, {"how": ["Постройте 2–3 эффекта, например «мягкое ограничение» y = x − x³/3 при |x| ≤ 1 и «перегруз» y = x³. Опишите словами, как меняется звук.", "Зависимость громкости от расстояния r: I ∼ 1/r², это степенная функция с n = −2."], "err": "Не указана область определения, где модель работает."}, {"how": ["Выберите эффект и задайте функцию с параметром, постройте график при 2–3 значениях параметра.", "Напишите вывод: при каком значении параметра искажение самое заметное."], "err": "Модель построена, но не объяснено, что означает параметр."}], "kk": [{"how": ["y = xⁿ функциясының жұп және тақ n үшін қасиеттерін қайталап, y = x, y = x², y = x³ графиктерін бір суретте салыңыз.", "x³ графигінің x² графигінен айырмашылығын түсіндіріңіз."], "err": "Дәрежелік функцияны (xⁿ) көрсеткіштік функциямен (aˣ) шатастырады."}, {"how": ["Мінсіз күшейту сызықтық: y = k·x. Сызықтық емес мүше қосылғанда бұрмалану пайда болады: y = x + a·x³.", "x = 0,5; 1; 1,5 қойып, a = 0 және a = 0,2 кезіндегі нәтижелерді салыстырыңыз."], "err": "Сызықтық жағдаймен салыстырмайды, сондықтан бұрмалану көрінбейді."}, {"how": ["2–3 эффект салыңыз, мысалы |x| ≤ 1 кезінде «жұмсақ шектеу» y = x − x³/3 және «шамадан тыс жүктеме» y = x³. Дыбыстың қалай өзгеретінін сөзбен сипаттаңыз.", "Қаттылықтың r қашықтығына тәуелділігі: I ∼ 1/r², бұл n = −2 болатын дәрежелік функция."], "err": "Модель жұмыс істейтін анықталу облысы көрсетілмейді."}, {"how": ["Эффектіні таңдап, параметрі бар функцияны беріңіз және параметрдің 2–3 мәнінде график салыңыз.", "Қорытынды жазыңыз: параметрдің қандай мәнінде бұрмалану ең байқалады."], "err": "Модель құрылады, бірақ параметрдің мағынасы түсіндірілмейді."}]}}, {"n": 4, "hours": 2, "kk": {"title": "Көрсеткіштік функцияларды қолдана отырып, дыбыс динамикасын модельдеу", "crit": "Дыбыс динамикасын модельдеу және көрсеткіштік теңдеулерді шешу үшін көрсеткіштік функцияларды қолданады.", "plan": ["Көрсеткіштік функцияларға кіріспе.", "Дыбыс динамикасын сипаттау үшін көрсеткіштік функцияларды қолдану.", "Көрсеткіштік теңдеулерді шешу.", "Практикалық тапсырма: дыбыстың ыдырау процесін модельдеу."], "forms": [{"h": "Практикалық модельдеу", "i": ["Көрсеткіштік функцияның графигін құрыңыз: y = A·e^(−kx), мұндағы A — бастапқы амплитуда, k — әлсіреу коэффициенті.", "Уақыт өте келе дыбыс көлемінің қалай өзгеретінін зерттеңіз."]}, {"h": "Музыкалық сигналды талдау", "i": ["Нақты әлсіреу сигналын (мысалы, фортепиано дыбысы) көрсеткіштік функция графигімен салыстырыңыз және параметрлерін табыңыз."]}, {"h": "Кейс-зерттеу", "i": ["Нақты концерт залындағы дыбыс динамикасын талдаңыз.", "Көзден тыңдаушыға дейінгі қашықтыққа байланысты дыбыстың әлсіреу моделін жасаңыз."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н., А. М. Ляпунов \" Функциялардың жалпы теория курсы \""]}, "ru": {"title": "Динамика звука и показательные функции", "crit": "Применяет показательные функции для моделирования динамики звука и решения показательных уравнений.", "plan": ["Введение в показательные функции.", "Применение показательных функций для описания динамики звука.", "Решение показательных уравнений.", "Практическое задание: смоделировать процесс затухания звука."], "forms": [{"h": "Практическое моделирование", "i": ["Построить график показательной функции y = A·e^(−kx), где A — начальная амплитуда, k — коэффициент затухания.", "Исследовать, как со временем изменяется громкость звука."]}, {"h": "Анализ музыкального сигнала", "i": ["Сравнить реальный затухающий сигнал (например, звук фортепиано) с графиком показательной функции и найти параметры."]}, {"h": "Кейс-исследование", "i": ["Проанализировать динамику звука в реальном концертном зале.", "Построить модель затухания звука в зависимости от расстояния от источника до слушателя."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, А.М. Ляпунов. «Курс общей теории функций»."]}, "links": {"ru": [{"t": "Показательная функция — Большая российская энциклопедия", "u": "https://bigenc.ru/wiki/%D0%9F%D0%BE%D0%BA%D0%B0%D0%B7%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F_%D1%84%D1%83%D0%BD%D0%BA%D1%86%D0%B8%D1%8F"}, {"t": "Затухающие колебания — Википедия", "u": "https://ru.wikipedia.org/wiki/Затухающие_колебания"}, {"t": "Desmos — графический калькулятор (построение графиков онлайн)", "u": "https://www.desmos.com/calculator"}], "kk": [{"t": "11-сынып: көрсеткіштік функцияның анықтамасы, қасиеттері және графигі", "u": "https://stud.kz/sabak-zhospary/id/16589"}, {"t": "Көрсеткіштік теңдеулер: теориясы, шешу әдістері және тестілік жаттығулар", "u": "https://stud.kz/sabak-zhospary/id/6548"}, {"t": "Desmos — графиктерді онлайн құру", "u": "https://www.desmos.com/calculator"}]}, "hints": {"ru": [{"how": ["Запишите определение y = aˣ (a > 0, a ≠ 1): при a > 1 функция растёт, при 0 < a < 1 убывает.", "Постройте y = 2ˣ и y = e^(−x) на одном графике."], "err": "Не различают рост и затухание."}, {"how": ["Модель затухания: A(t) = A₀·e^(−kt), где A₀ — начальная громкость, k > 0 — скорость затухания.", "Подберите k так, чтобы за 2 с амплитуда упала вдвое: e^(−2k) = 1/2, k = ln 2 / 2 ≈ 0,35."], "err": "Забывают, что k > 0, и получают рост вместо спада."}, {"how": ["Решите 3ˣ = 81 (x = 4) и e^(−0,5t) = 0,1 (t = 2·ln 10 ≈ 4,6).", "Проверьте ответы подстановкой."], "err": "Не проверяют ответ подстановкой."}, {"how": ["Найдите время, за которое звук затухнет до 1% от начального: e^(−kt) = 0,01.", "Сравните график с реальной записью (например, одной ноты фортепиано) и подпишите расхождения."], "err": "Берут k из примера, а не подбирают по своей записи."}], "kk": [{"how": ["y = aˣ анықтамасын жазыңыз (a > 0, a ≠ 1): a > 1 болғанда функция өседі, 0 < a < 1 болғанда кемиді.", "y = 2ˣ және y = e^(−x) графиктерін бір суретте салыңыз."], "err": "Өсу мен әлсіреуді ажыратпайды."}, {"how": ["Әлсіреу моделі: A(t) = A₀·e^(−kt), мұндағы A₀ — бастапқы қаттылық, k > 0 — әлсіреу жылдамдығы.", "k-ны 2 с ішінде амплитуда екі есе кемитіндей етіп таңдаңыз: e^(−2k) = 1/2, k = ln 2 / 2 ≈ 0,35."], "err": "k > 0 екенін ұмытып, әлсіреудің орнына өсу алады."}, {"how": ["3ˣ = 81 (x = 4) және e^(−0,5t) = 0,1 (t = 2·ln 10 ≈ 4,6) теңдеулерін шешіңіз.", "Жауаптарды қою арқылы тексеріңіз."], "err": "Жауапты қою арқылы тексермейді."}, {"how": ["Дыбыс бастапқының 1%-ына дейін әлсірейтін уақытты табыңыз: e^(−kt) = 0,01.", "Графикті нақты жазбамен (мысалы, фортепианоның бір нотасы) салыстырып, айырмашылықтарға қол қойыңыз."], "err": "k-ны өз жазбасынан таңдамай, мысалдан алады."}]}}, {"n": 5, "hours": 2, "kk": {"title": "Музыка көлемінің өзгеруін талдау үшін туындыларды қолдану", "crit": "Музыка көлемінің өзгеруін талдау және сәйкес есептерді шешу үшін туындыны қолданады.", "plan": ["Туындыларға кіріспе.", "Функцияларды талдау үшін туындыларды қолдану.", "Дыбыс деңгейінің өзгеруін талдау үшін туындыларды қолдану.", "Практикалық тапсырма: музыкалық шығарманың көлемінің өзгеруін талдау."], "forms": [{"h": "Дыбыс толқындарының өзгеруін талдау", "i": ["Туынды көмегімен дыбыс көлемінің өзгеруін зерттеу."]}, {"h": "Графикалық жоба", "i": ["Дыбыстық функциялардың туындыларының графиктерін құрыңыз."]}, {"h": "Зерттеу жұмысы", "i": ["Музыкалық фрагменттің дыбыс функциясының экстремум нүктелерін анықтаңыз."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н., Кудрявцев Л. Д. \" Математикалық талдау курсы \""]}, "ru": {"title": "Производные для анализа изменения громкости", "crit": "Применяет производную для анализа изменения громкости музыки и решения соответствующих задач.", "plan": ["Введение в производные.", "Применение производных для анализа функций.", "Применение производных для анализа изменения уровня громкости.", "Практическое задание: проанализировать изменение громкости музыкального произведения."], "forms": [{"h": "Анализ изменения звуковых волн", "i": ["Исследовать изменение громкости звука с помощью производной."]}, {"h": "Графический проект", "i": ["Построить графики производных звуковых функций."]}, {"h": "Исследовательская работа", "i": ["Определить точки экстремума звуковой функции музыкального фрагмента."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, Л.Д. Кудрявцев. «Курс математического анализа»."]}, "links": {"ru": [{"t": "Производная — Википедия", "u": "https://ru.wikipedia.org/wiki/Производная"}, {"t": "Desmos — графический калькулятор (построение графиков онлайн)", "u": "https://www.desmos.com/calculator"}], "kk": [{"t": "Туынды ұғымы және оның есептеу теоремалары мен қолданбалары", "u": "https://stud.kz/referat/show/57771"}, {"t": "Desmos — графиктерді онлайн құру", "u": "https://www.desmos.com/calculator"}]}, "hints": {"ru": [{"how": ["Запишите определение: производная — скорость изменения функции. Для громкости A(t) число A′(t) показывает, как быстро звук становится громче.", "Повторите правила: (tⁿ)′ = n·tⁿ⁻¹, (sin t)′ = cos t."], "err": "Путают производную с самой функцией."}, {"how": ["Возьмите A(t) = t³ − 6t² + 9t. Тогда A′(t) = 3t² − 12t + 9 = 3(t − 1)(t − 3).", "Определите знак A′ на промежутках: A растёт при t < 1 и t > 3, убывает на (1; 3)."], "err": "Знак производной определяют без разложения на множители и ошибаются."}, {"how": ["Сопоставьте: A′ > 0 — crescendo, A′ < 0 — diminuendo, A′ = 0 — пик или «плато».", "Максимум самой A′ показывает момент самого быстрого нарастания громкости."], "err": "Называют пиком любую точку, где A′ = 0."}, {"how": ["Выберите фрагмент с динамикой (p → f → p) и задайте функцию громкости по нескольким точкам.", "Постройте A и A′ на одном рисунке и напишите вывод в 2–3 предложениях."], "err": "Графики A и A′ без подписей, их путают."}], "kk": [{"how": ["Анықтаманы жазыңыз: туынды — функцияның өзгеру жылдамдығы. Қаттылық A(t) үшін A′(t) дыбыстың қаншалықты тез күшейетінін көрсетеді.", "Ережелерді қайталаңыз: (tⁿ)′ = n·tⁿ⁻¹, (sin t)′ = cos t."], "err": "Туындыны функцияның өзімен шатастырады."}, {"how": ["A(t) = t³ − 6t² + 9t алыңыз. Сонда A′(t) = 3t² − 12t + 9 = 3(t − 1)(t − 3).", "Аралықтарда A′ таңбасын анықтаңыз: A функциясы t < 1 және t > 3 кезінде өседі, (1; 3) аралығында кемиді."], "err": "Көбейткіштерге жіктемей, таңбаны қате анықтайды."}, {"how": ["Салыстырыңыз: A′ > 0 — crescendo, A′ < 0 — diminuendo, A′ = 0 — шың немесе «үстірт».", "A′ функциясының максимумы қаттылықтың ең тез өсу сәтін көрсетеді."], "err": "A′ = 0 болатын кез келген нүктені шың деп атайды."}, {"how": ["Динамикасы бар үзіндіні (p → f → p) таңдап, қаттылық функциясын бірнеше нүкте бойынша беріңіз.", "A және A′ графиктерін бір суретте салып, 2–3 сөйлеммен қорытынды жазыңыз."], "err": "A және A′ графиктеріне қол қойылмайды, олар шатасады."}]}}, {"n": 6, "hours": 2, "kk": {"title": "Дыбыстың жалпы энергиясын есептеу үшін интегралдарды қолдану", "crit": "Дыбыстық толқындардың энергиясын есептеу және акустикалық сипаттамаларды талдау үшін интегралдарды қолданады.", "plan": ["Интегралдарға кіріспе.", "Қисық астындағы ауданды есептеу үшін интегралдарды қолдану.", "Дыбыс толқындарының энергиясын есептеу үшін интегралдарды қолдану.", "Практикалық тапсырма: дыбыс толқынының энергиясын есептеу."], "forms": [{"h": "Дыбыс энергиясын талдау", "i": ["Акустикалық толқынның энергиясын есептеу үшін интегралды қолданыңыз."]}, {"h": "Жобалық жұмыс", "i": ["Резонанстық жүйеде энергияның жиналуын зерттеу."]}, {"h": "Практикалық тапсырма", "i": ["Оның жалпы қарқындылығын анықтау үшін музыкалық сигнал графигінің астындағы аймақты табыңыз."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н., Дорофеев Г. В., Дорофеев И. Г. \" Инженерлерге арналған математикалық талдау \""]}, "ru": {"title": "Интегралы: полная энергия звука", "crit": "Применяет интегралы для вычисления энергии звуковых волн и анализа акустических характеристик.", "plan": ["Введение в интегралы.", "Применение интегралов для вычисления площади под кривой.", "Применение интегралов для вычисления энергии звуковых волн.", "Практическое задание: вычислить энергию звуковой волны."], "forms": [{"h": "Анализ энергии звука", "i": ["Применить интеграл для вычисления энергии акустической волны."]}, {"h": "Проектная работа", "i": ["Исследовать накопление энергии в резонансной системе."]}, {"h": "Практическое задание", "i": ["Найти площадь под графиком музыкального сигнала, чтобы определить его общую интенсивность."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, Г.В. Дорофеев, И.Г. Дорофеев. «Математический анализ для инженеров»."]}, "links": {"ru": [{"t": "Определённый интеграл — энциклопедический словарь", "u": "https://dic.academic.ru/dic.nsf/ruwiki/1076831"}, {"t": "Интеграл — Википедия", "u": "https://ru.wikipedia.org/wiki/Интеграл"}, {"t": "Desmos — графический калькулятор (построение графиков онлайн)", "u": "https://www.desmos.com/calculator"}], "kk": [{"t": "Анықталған интеграл: анықтамасы, геометриялық мағынасы және негізгі қасиеттері", "u": "https://stud.kz/referat/show/56086"}, {"t": "Жазық фигуралардың ауданын есептеуде анықталған интегралды қолдану", "u": "https://stud.kz/prezentatsiya/id/27414"}, {"t": "Desmos — графиктерді онлайн құру", "u": "https://www.desmos.com/calculator"}]}, "hints": {"ru": [{"how": ["Запишите идею: интеграл — сумма маленьких вкладов, площадь под графиком.", "Повторите: ∫ tⁿ dt = tⁿ⁺¹/(n+1) + C, ∫ sin t dt = −cos t + C."], "err": "Забывают «+ C» у неопределённого интеграла."}, {"how": ["Вычислите площадь под y = t² на [0; 3]: ∫₀³ t² dt = 27/3 = 9.", "Проверьте грубой оценкой: нарисуйте прямоугольники и сравните."], "err": "Путают верхний и нижний пределы."}, {"how": ["Энергия сигнала пропорциональна ∫ A²(t) dt. Для A(t) = sin t на [0; π]: ∫ sin² t dt = π/2.", "Используйте формулу sin² t = (1 − cos 2t)/2."], "err": "Интегрируют A вместо A²."}, {"how": ["Выберите сигнал, например A(t) = 2e^(−t) на [0; 3], и найдите ∫ A² dt = 2(1 − e⁻⁶) ≈ 2.", "Запишите результат в условных единицах и объясните, что он значит для звука."], "err": "Не меняют пределы интегрирования после замены переменной."}], "kk": [{"how": ["Идеяны жазыңыз: интеграл — шағын үлестердің қосындысы, график астындағы аудан.", "Қайталаңыз: ∫ tⁿ dt = tⁿ⁺¹/(n+1) + C, ∫ sin t dt = −cos t + C."], "err": "Анықталмаған интегралда «+ C» жазуды ұмытады."}, {"how": ["y = t² функциясы астындағы [0; 3] аралығындағы ауданды есептеңіз: ∫₀³ t² dt = 27/3 = 9.", "Шамамен бағалап тексеріңіз: тіктөртбұрыштар сызып, салыстырыңыз."], "err": "Жоғарғы және төменгі шектерді шатастырады."}, {"how": ["Сигнал энергиясы ∫ A²(t) dt шамасына пропорционал. [0; π] аралығындағы A(t) = sin t үшін: ∫ sin² t dt = π/2.", "Формуланы қолданыңыз: sin² t = (1 − cos 2t)/2."], "err": "A² орнына A интегралдайды."}, {"how": ["Сигнал таңдаңыз, мысалы [0; 3] аралығында A(t) = 2e^(−t), және ∫ A² dt = 2(1 − e⁻⁶) ≈ 2 табыңыз.", "Нәтижені шартты бірлікпен жазып, дыбыс үшін нені білдіретінін түсіндіріңіз."], "err": "Айнымалыны ауыстырғаннан кейін интегралдау шектерін өзгертпейді."}]}}, {"n": 7, "hours": 2, "kk": {"title": "Музыкалық шығармаларда ноталарды қолдану жиілігін талдау", "crit": "Музыкалық шығармаларды талдауда статистика элементтерін қолданады.", "plan": ["Деректерді жинау: музыкалық шығарманың берілген үзіндісіндегі әрбір нотаның пайдалану жиілігін есептеу.", "Жиіліктің таралу кестесін құру.", "Гистограмманы құру және орташа, мода, медиананы есептеу.", "Шығарманың музыкалық стилі тұрғысынан алынған деректерді талдау."], "forms": [{"h": "Графикалық есеп", "i": ["Түсініктемелері бар нота жиілігінің таралу гистограммасын құру."]}, {"h": "Практикалық тапсырма", "i": ["Музыкалық шығарманы тыңдау және нота жиілігі бойынша деректерді өздігінен жинау."]}, {"h": "Топтық жұмыс", "i": ["Студенттер тобы әртүрлі жұмыстарды талдайды және нәтижелерді салыстырады."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н., Дорофеев Г. В., Дорофеев И. Г. \" Инженерлерге арналған математикалық талдау \""]}, "ru": {"title": "Частота нот в музыкальных произведениях", "crit": "Применяет элементы статистики в анализе музыкальных произведений.", "plan": ["Сбор данных: подсчитать частоту использования каждой ноты в заданном отрывке произведения.", "Составить таблицу распределения частот.", "Построить гистограмму и вычислить среднее, моду и медиану.", "Проанализировать полученные данные с точки зрения музыкального стиля произведения."], "forms": [{"h": "Графический отчёт", "i": ["Построить гистограмму распределения частоты нот с пояснениями."]}, {"h": "Практическое задание", "i": ["Прослушать музыкальное произведение и самостоятельно собрать данные о частоте нот."]}, {"h": "Групповая работа", "i": ["Группа студентов анализирует разные произведения и сравнивает результаты."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, Г.В. Дорофеев, И.Г. Дорофеев. «Математический анализ для инженеров»."]}, "links": {"ru": [{"t": "Среднее, медиана и мода — Т—Ж", "u": "https://t-j.ru/list/srednee-mediana-moda/"}, {"t": "Статистическая обработка данных — урок", "u": "https://infourok.ru/urok-statisticheskaya-obrabotka-dannih-533214.html"}, {"t": "Гистограмма — Википедия", "u": "https://ru.wikipedia.org/wiki/Гистограмма"}], "kk": [{"t": "Дәріс 7. Деректерді сипаттайтын статистикалық әдістер", "u": "https://farabi.university/storage/files/3453746004690a80131f064781166393_%D0%94%D3%99%D1%80%D1%96%D1%81%207%20%D0%94%D0%B5%D1%80%D0%B5%D0%BA%D1%82%D0%B5%D1%80%D0%B4%D1%96%20%D1%81%D0%B8%D0%BF%D0%B0%D1%82%D1%82%D0%B0%D0%B9%D1%82%D1%8B%D0%BD%20%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0%D0%BB%D1%8B%D2%9B%20%D3%99%D0%B4%D1%96%D1%81%D1%82%D0%B5%D1%80.pdf"}, {"t": "Қазақша Уикипедиядан іздеу: гистограмма", "u": "https://kk.wikipedia.org/w/index.php?search=гистограмма"}]}, "hints": {"ru": [{"how": ["Выберите 16–32 такта и выпишите каждую ноту отдельно (до, ре, ми…). Повторы считаются.", "Ведите подсчёт в таблице «нота — сколько раз»."], "err": "Считают только разные ноты, а не все повторы."}, {"how": ["Столбцы: нота, частота (сколько раз), доля = частота / общее число нот.", "Проверьте: сумма частот равна общему числу нот, сумма долей равна 1."], "err": "Сумма долей не равна 1: ошибка в подсчёте."}, {"how": ["По оси x — ноты, по оси y — частота. Постройте гистограмму в Excel, Google Таблицах или Desmos.", "Мода — самая частая нота. Для среднего и медианы кодируйте ноты числами (до = 1 … си = 7)."], "err": "Считают среднее для названий нот, не заменив их числами."}, {"how": ["Ответьте: какая нота встречается чаще всех? Совпадает ли она с тоникой произведения?", "Сравните со вторым произведением и сделайте вывод о стиле."], "err": "Вывод только по цифрам, без музыкального смысла."}], "kk": [{"how": ["16–32 такт таңдап, әр нотаны жеке жазыңыз (до, ре, ми…). Қайталанулар да есептеледі.", "«нота — неше рет» кестесінде санауды жүргізіңіз."], "err": "Барлық қайталануды емес, тек әртүрлі ноталарды санайды."}, {"how": ["Бағандар: нота, жиілік (неше рет), үлес = жиілік / нота саны.", "Тексеріңіз: жиіліктер қосындысы нота санына тең, үлестер қосындысы 1-ге тең."], "err": "Үлестер қосындысы 1-ге тең емес: санауда қате бар."}, {"how": ["x осінде — ноталар, y осінде — жиілік. Гистограмманы Excel, Google кестелерінде немесе Desmos-та салыңыз.", "Мода — ең жиі кездесетін нота. Орташа мен медиана үшін ноталарды сандармен кодтаңыз (до = 1 … си = 7)."], "err": "Нота атауларының орташасын санмен ауыстырмай есептейді."}, {"how": ["Жауап беріңіз: қай нота ең жиі кездеседі? Ол шығарманың тоникасымен сәйкес пе?", "Екінші шығармамен салыстырып, стиль туралы қорытынды жасаңыз."], "err": "Қорытынды тек цифрларға сүйенеді, музыкалық мағынасы жоқ."}]}}, {"n": 8, "hours": 2, "kk": {"title": "Музыкалық аспаптардың көлемін есептеу", "crit": "Пішін геометриясы мен музыкалық аспаптардың акустикалық сипаттамалары арасындағы байланысты түсінеді.", "plan": ["Аспаптарды модельдеу үшін қолдануға болатын геометриялық пішіндерді анықтау (мысалы, фортепиано — параллелепипед, скрипка — шамамен айналу денесі).", "Осы модельдердің көлемі мен бет ауданын есептеу.", "Әр түрлі типтегі аспаптардың көлемін салыстыру."], "forms": [{"h": "Жеке жұмыс", "i": ["Есептеулер мен сызбалармен жазбаша есеп. Өлшемдері бар аспаптың қолмен жасалған немесе сандық үлгісі."]}, {"h": "Топтық жұмыс (міндетті емес)", "i": ["Әр топ өз аспабын таңдайды, есептеулер жүргізеді және нәтижелерді презентация түрінде ұсынады."]}, {"h": "Нәтижелерді таныстыру", "i": ["Сызба мен есептеулерді көрсете отырып, нәтижелерді ауызша ұсыну.", "Жұмысты визуализациялау үшін презентация (PowerPoint, Canva)."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "А.Е.Әбылқасымова,  З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы  11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "Морозов Н. Н., Дорофеев Г. В., Дорофеев И. Г. \" Инженерлерге арналған математикалық талдау \""]}, "ru": {"title": "Объём музыкальных инструментов", "crit": "Понимает связь между геометрией формы и акустическими характеристиками музыкальных инструментов.", "plan": ["Определить геометрические формы, которыми можно моделировать инструменты (например, фортепиано — параллелепипед, скрипка — приближённо тело вращения).", "Вычислить объём и площадь поверхности этих моделей.", "Сравнить объёмы инструментов разных типов."], "forms": [{"h": "Индивидуальная работа", "i": ["Письменный отчёт с расчётами и чертежами. Макет инструмента с размерами, ручной или цифровой."]}, {"h": "Групповая работа (необязательно)", "i": ["Каждая группа выбирает свой инструмент, проводит расчёты и представляет результаты в виде презентации."]}, {"h": "Представление результатов", "i": ["Устно представить результаты, показав чертёж и расчёты.", "Презентация (PowerPoint, Canva) для визуализации работы."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 11 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2020.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "Н.Н. Морозов, Г.В. Дорофеев, И.Г. Дорофеев. «Математический анализ для инженеров»."]}, "links": {"ru": [{"t": "Объём — Википедия", "u": "https://ru.wikipedia.org/wiki/Объём"}, {"t": "Тело вращения — Википедия", "u": "https://ru.wikipedia.org/wiki/Тело_вращения"}, {"t": "GeoGebra — графики, построения и геометрия онлайн", "u": "https://www.geogebra.org/graphing"}], "kk": [{"t": "Айналу денелері: цилиндр, конус және шардың қасиеттері, бет аудандары мен көлемдері", "u": "https://stud.kz/referat/show/57770"}, {"t": "Цилиндр, конус және шар: анықтамалар, элементтері және қималары", "u": "https://stud.kz/sabak-zhospary/id/16626"}, {"t": "GeoGebra — графиктер мен геометриялық салуларды онлайн құру", "u": "https://www.geogebra.org/graphing"}]}, "hints": {"ru": [{"how": ["Выберите инструмент и простую модель: фортепиано — параллелепипед, барабан — цилиндр, корпус гитары — составное тело.", "Измерьте размеры рулеткой с разрешения владельца или возьмите из паспорта инструмента."], "err": "Размеры записаны в разных единицах (см и м)."}, {"how": ["Параллелепипед: V = a·b·c, S = 2(ab + bc + ac). Цилиндр: V = πr²h, S = 2πr(r + h).", "Подставьте числа и запишите ответ с единицами (см³ или л)."], "err": "Путают радиус и диаметр."}, {"how": ["Составьте таблицу: инструмент, модель, объём, площадь поверхности.", "Объясните, у какого инструмента объём больше и как это связано с басовым или высоким звучанием."], "err": "Сравнивают объёмы в разных единицах."}], "kk": [{"how": ["Аспап пен қарапайым модель таңдаңыз: фортепиано — параллелепипед, барабан — цилиндр, гитара корпусы — құрама дене.", "Өлшемдерді иесінің рұқсатымен рулеткамен өлшеңіз немесе аспаптың паспортынан алыңыз."], "err": "Өлшемдер әртүрлі бірліктерде жазылады (см және м)."}, {"how": ["Параллелепипед: V = a·b·c, S = 2(ab + bc + ac). Цилиндр: V = πr²h, S = 2πr(r + h).", "Сандарды қойып, жауапты бірлікпен жазыңыз (см³ немесе л)."], "err": "Радиус пен диаметрді шатастырады."}, {"how": ["Кесте құрыңыз: аспап, модель, көлем, бет ауданы.", "Қай аспаптың көлемі үлкен екенін және оның бас немесе жоғары дыбыспен байланысын түсіндіріңіз."], "err": "Көлемдерді әртүрлі бірліктермен салыстырады."}]}}, {"n": 9, "hours": 2, "kk": {"title": "Толқындардың геометриясы: музыкалық акустикадағы шеңберлер, эллипстер және синусоидтар", "crit": "Шеңбер мен синусоидтың дыбыс толқындарын қалай сипаттайтынын түсіндіреді және оны дыбыстарды талдау үшін пайдаланады.", "plan": ["Шеңбер мен синусоид арасындағы байланысты зерттеу (шеңбердегі нүктенің проекциясы).", "Шеңбер негізінде синусоидалық графиктер құру.", "Музыкалық аспаптар шығаратын акустикалық толқындарды талдау үшін білімді қолдану.", "Тапсырманы орындау: әр түрлі жиіліктегі және амплитудадағы синусоидаларды құрып, олардың нақты дыбыстармен байланысын көрсету."], "forms": [{"h": "Практикалық жұмыс", "i": ["Қағазда немесе графикалық бағдарламаларда синусоидалар құру (GeoGebra, Desmos).", "Әр түрлі жиіліктегі және амплитудадағы синусоидалық толқындардың қабаттасуы."]}, {"h": "Мультимедиялық презентация", "i": ["Дыбыс толқынының шеңбермен қалай байланысатынын көрсететін графиктер мен анимациялар жасау."]}, {"h": "Шағын зерттеу", "i": ["Аудиоредактордың (Audacity) көмегімен нақты жазбадан дыбыс толқынының тербелістерін талдау."]}], "lit": ["А.Е.Әбылқасымова, З.Ә. Жұмағұлова,  Алгебра және анализ бастамалары: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Әбілқасымова А.Е., Корчевский В.Е., Жұмағұлова З.Ә., Алгебра және анализ бастамасы, 10 сынып, 1-2 бөлімдері,  жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "Пак О,Ардакулы Д, Ескендирова Е, Курман Б, Анапинова Г. Алгебра және анализ бастамалары. Оқулық 1, 2 бөлім. Алматы кітап, 2019ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020 ж.", "Толық нұсқаулық: Геометрия және музыка (Google Books).", "Тербеліс теориясы: дыбыстық толқындар және Музыка теориясы,  Physics Classroom қол жетімді."]}, "ru": {"title": "Геометрия волн: окружности, эллипсы и синусоиды в музыкальной акустике", "crit": "Объясняет, как окружность и синусоида описывают звуковые волны, и использует это для анализа звуков.", "plan": ["Исследовать связь между окружностью и синусоидой (проекция точки на окружности).", "Построить синусоидальные графики на основе окружности.", "Применить знания для анализа акустических волн, издаваемых музыкальными инструментами.", "Выполнить задание: построить синусоиды разных частот и амплитуд и показать их связь с реальными звуками."], "forms": [{"h": "Практическая работа", "i": ["Построить синусоиды на бумаге или в графических программах (GeoGebra, Desmos).", "Наложение синусоидальных волн разных частот и амплитуд."]}, {"h": "Мультимедийная презентация", "i": ["Создать графики и анимации, показывающие связь звуковой волны с окружностью."]}, {"h": "Мини-исследование", "i": ["Проанализировать колебания звуковой волны реальной записи с помощью аудиоредактора (Audacity)."]}], "lit": ["А.Е. Абылкасымова, З.А. Жумагулова. Алгебра и начала анализа: учебник для 10 класса общественно-гуманитарного направления общеобразовательной школы. Алматы: «Мектеп», 2019.", "А.Е. Абилкасымова, В.Е. Корчевский, З.А. Жумагулова. Алгебра и начала анализа, 10 класс, части 1–2: учебник для естественно-математического направления. Алматы: «Мектеп», 2019.", "Абылкасымова А.Е., Кучер Т., Корчевский В., Жумагулова З.", "О. Пак, Д. Ардакулы, Е. Ескендирова, Б. Курман, Г. Анапинова. Алгебра и начала анализа. Учебник, части 1, 2. Алматы: «Алматы кітап», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 10 класса естественно-математического направления. Алматы: «Мектеп», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 11 класса естественно-математического направления. Алматы: «Мектеп», 2020.", "Полное руководство: «Геометрия и музыка» (Google Books).", "Теория колебаний: звуковые волны и теория музыки (ресурс The Physics Classroom)."]}, "links": {"ru": [{"t": "Синусоида — Википедия", "u": "https://ru.wikipedia.org/wiki/Синусоида"}, {"t": "GeoGebra — графики, построения и геометрия онлайн", "u": "https://www.geogebra.org/graphing"}, {"t": "Audacity — бесплатный аудиоредактор для анализа записи", "u": "https://www.audacityteam.org/"}], "kk": [{"t": "Дыбыс толқындары: қасиеттері, таралуы және оқыту-әдістемесі", "u": "https://stud.kz/prezentatsiya/id/21995"}, {"t": "GeoGebra — графиктер мен геометриялық салуларды онлайн құру", "u": "https://www.geogebra.org/graphing"}, {"t": "Audacity — жазбаны талдауға арналған тегін аудиоредактор", "u": "https://www.audacityteam.org/"}]}, "hints": {"ru": [{"how": ["Точка движется по окружности радиуса A с постоянной скоростью. Её высота над центром y = A·sin(ωt) — это синусоида.", "Нарисуйте окружность и отметьте проекции точки через каждые 30°."], "err": "Забывают, что один оборот по окружности — это один период синусоиды (2π)."}, {"how": ["Заполните таблицу: угол 0°, 30°, …, 360° и значение sin. Перенесите значения на график.", "Проверьте в GeoGebra: параметр A меняет высоту волны, а частота f — число волн за секунду."], "err": "Разный масштаб осей искажает волну."}, {"how": ["Нота Ля (440 Гц): y = A·sin(2π·440·t), период T = 1/440 ≈ 0,0023 с.", "Сравните с нотой октавой выше (880 Гц): период вдвое короче."], "err": "Путают частоту и период."}, {"how": ["Постройте две волны разных частот и сложите их (в Desmos: y = sin(x) + sin(2x)).", "Запишите вывод о том, как складывается звук нескольких инструментов. По желанию сопоставьте с записью в Audacity."], "err": "Не подписано, какая линия соответствует какой частоте."}], "kk": [{"how": ["Нүкте радиусы A шеңбер бойымен тұрақты жылдамдықпен қозғалады. Оның центрден биіктігі y = A·sin(ωt) — синусоида.", "Шеңбер сызып, нүктенің проекцияларын әр 30° сайын белгілеңіз."], "err": "Шеңбер бойымен бір айналым синусоиданың бір периодына (2π) тең екенін ұмытады."}, {"how": ["Кестені толтырыңыз: 0°, 30°, …, 360° бұрыштары және sin мәндері. Мәндерді графикке көшіріңіз.", "GeoGebra-да тексеріңіз: A параметрі толқын биіктігін, ал f жиілігі секундтағы толқын санын өзгертеді."], "err": "Осьтердің әртүрлі масштабы толқынды бұрмалайды."}, {"how": ["Ля нотасы (440 Гц): y = A·sin(2π·440·t), период T = 1/440 ≈ 0,0023 с.", "Бір октава жоғары нотамен (880 Гц) салыстырыңыз: период екі есе қысқа."], "err": "Жиілік пен периодты шатастырады."}, {"how": ["Екі түрлі жиіліктегі толқынды салып, оларды қосыңыз (Desmos-та: y = sin(x) + sin(2x)).", "Бірнеше аспаптың дыбысы қалай қосылатыны туралы қорытынды жазыңыз. Қаласаңыз, Audacity-дегі жазбамен салыстырыңыз."], "err": "Қай сызық қай жиілікке сәйкес екені көрсетілмейді."}]}}, {"n": 10, "hours": 2, "kk": {"title": "Музыкалық аспаптар архитектурасындағы алтын қима", "crit": "Музыкалық аспаптар дизайнындағы алтын қиманы анықтайды және оның акустикаға әсерін түсіндіреді.", "plan": ["Алтын қиманың негіздерін және оның геометрияда қолданылуын қарастыру.", "Музыкалық аспаптардың пропорцияларын талдау (скрипка, гитара).", "Практикалық жұмыс: аспаптардың өлшемдерін өлшеп, алтын қиманың бар-жоғын тексеру.", "Қорытындылармен есеп беру."], "forms": [{"h": "Зерттеу жобасы", "i": ["Нақты музыкалық аспаптарды өлшеу (гитара, скрипка).", "Алтын қимаға жақын қатынастарды анықтау."]}, {"h": "Топтық жұмыс", "i": ["Студенттер топтарға бөлінеді, әрқайсысы аспапты немесе музыкалық затты (фортепиано, микрофондар, органдар) зерттейді.", "Нәтижелерді дөңгелек үстел форматында талқылау."]}, {"h": "Виртуалды көрме", "i": ["Өлшеу нәтижелерін аспаптардың макеттері немесе 3D модельдері арқылы ұсыну."]}], "lit": ["В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020 ж.", "Е.Н. Шыныбеков.,  Д.Э.Шыныбеков,  Р.Н. Жумбаева, геометрия: жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Атамұра, 2020ж.", "The Golden Ratio: The Story of Phi (Goodreads).", "Өнер мен музыкадағы алтын қатынасты зерттеу : Khan Academy."]}, "ru": {"title": "Золотое сечение в строении музыкальных инструментов", "crit": "Определяет золотое сечение в конструкции музыкальных инструментов и объясняет его влияние на акустику.", "plan": ["Рассмотреть основы золотого сечения и его применение в геометрии.", "Проанализировать пропорции музыкальных инструментов (скрипка, гитара).", "Практическая работа: измерить размеры инструментов и проверить наличие золотого сечения.", "Подготовить отчёт с выводами."], "forms": [{"h": "Исследовательский проект", "i": ["Измерить реальные музыкальные инструменты (гитара, скрипка).", "Найти соотношения, близкие к золотому сечению."]}, {"h": "Групповая работа", "i": ["Студенты делятся на группы, каждая исследует инструмент или музыкальный предмет (фортепиано, микрофоны, органы).", "Обсудить результаты в формате круглого стола."]}, {"h": "Виртуальная выставка", "i": ["Представить результаты измерений через макеты или 3D-модели инструментов."]}], "lit": ["В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 10 класса общественно-гуманитарного направления. Алматы: «Мектеп», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 11 класса общественно-гуманитарного направления. Алматы: «Мектеп», 2020.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 10 класса естественно-математического направления. Алматы: «Мектеп», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 11 класса естественно-математического направления. Алматы: «Мектеп», 2020.", "Е.Н. Шыныбеков, Д.Э. Шыныбеков, Р.Н. Жумабаев. Геометрия: учебник для 11 класса естественно-математического направления. Алматы: «Атамура», 2020.", "The Golden Ratio: The Story of Phi (Goodreads, на английском языке).", "Исследование золотого сечения в искусстве и музыке (Khan Academy)."]}, "links": {"ru": [{"t": "Золотое сечение — Большая российская энциклопедия", "u": "https://bigenc.ru/c/zolotoe-sechenie-697333"}, {"t": "Золотое сечение — Википедия", "u": "https://ru.wikipedia.org/wiki/Золотое_сечение"}], "kk": [{"t": "Алтын қима: математикалық негіздері, геометриялық пішіндері және қолданылуы", "u": "https://stud.kz/referat/show/101870"}, {"t": "Алтын қиманың геометриялық негіздері, тарихы және өнер мен табиғаттағы қолданылуы", "u": "https://stud.kz/referat/show/26245"}]}, "hints": {"ru": [{"how": ["Золотое сечение φ = (1 + √5)/2 ≈ 1,618: целый отрезок относится к большей части так же, как большая часть к меньшей.", "Постройте на бумаге золотой прямоугольник и проверьте отношение сторон."], "err": "Округляют φ до 1,6 и получают заметную погрешность."}, {"how": ["Выберите у скрипки, гитары или домбры две части для сравнения (например, корпус и гриф).", "Вычислите отношение большей части к меньшей и сравните с 1,618."], "err": "Сравнивают части, которые не связаны между собой."}, {"how": ["Измерьте не менее 3 пар размеров и запишите в таблицу с погрешностью (±1 мм) с разрешения владельца.", "Для каждой пары вычислите отношение и отклонение от φ в процентах."], "err": "Не указана погрешность, поэтому нельзя сказать «близко» или «нет»."}, {"how": ["Сделайте вывод: в скольких парах отношение близко к φ (в пределах 5%).", "Честно отметьте, где золотое сечение не подтвердилось."], "err": "Подгоняют измерения под ожидаемый результат."}], "kk": [{"how": ["Алтын қима φ = (1 + √5)/2 ≈ 1,618: бүтін кесінді үлкен бөлікке үлкен бөліктің кіші бөлікке қатынасындай қатынасады.", "Қағазда алтын тіктөртбұрыш салып, қабырғалар қатынасын тексеріңіз."], "err": "φ-ді 1,6-ға дейін дөңгелектеп, байқалатын қателік алады."}, {"how": ["Скрипка, гитара немесе домбырадан салыстыратын екі бөлікті таңдаңыз (мысалы, корпус пен мойын).", "Үлкен бөліктің кішіге қатынасын есептеп, 1,618-мен салыстырыңыз."], "err": "Өзара байланыссыз бөліктерді салыстырады."}, {"how": ["Иесінің рұқсатымен кемінде 3 жұп өлшемді өлшеп, қателігімен (±1 мм) кестеге жазыңыз.", "Әр жұп үшін қатынасты және φ-ден пайыздағы ауытқуды есептеңіз."], "err": "Қателік көрсетілмейді, сондықтан «жақын» немесе «жоқ» деп айту мүмкін емес."}, {"how": ["Қорытынды жасаңыз: қанша жұпта қатынас φ-ге жақын (5% шегінде).", "Алтын қима расталмаған жерді адал атап өтіңіз."], "err": "Өлшемдерді күтілетін нәтижеге бейімдейді."}]}}, {"n": 11, "hours": 2, "kk": {"title": "Музыкалық аспаптар дизайнындағы симметрия және өрнектер", "crit": "Музыкалық аспаптар дизайнындағы симметрияны таниды және қолданады.", "plan": ["Симметрия түрлерін зерттеу (осьтік, орталық, айналмалы).", "Дизайндағы өрнектер мен симметрияны талдау (мысалы, гитара мойнындағы немесе скрипка корпусындағы өрнектер).", "Симметрияны қолдана отырып, музыкалық аспаптың эскизін салу немесе жасау."], "forms": [{"h": "Шығармашылық жұмыс", "i": ["Геометриялық симметрияны қолдана отырып, өзіңіздің жеке аспап дизайныңызды жасаңыз.", "Сызбаларды, макеттерді немесе 3D модельдерді орындау."]}, {"h": "Жұмыстар көрмесі", "i": ["Қысқаша түсіндірмелері бар студенттік жобалардың экспозициясын ұйымдастыру."]}, {"h": "Кейс-зерттеу", "i": ["Қолданыстағы музыкалық аспаптарды (гармонь, балалайка, фортепиано) симметрия және сәндік өрнектер тұрғысынан талдау."]}], "lit": ["В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020 ж.", "Е.Н. Шыныбеков.,  Д.Э.Шыныбеков,  Р.Н. Жумбаева, геометрия: жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Атамұра, 2020ж.", "Symmetry in Geometry and Music (Springer).", "Өнердегі симметрияны зерттеу : Art of Mathematics."]}, "ru": {"title": "Симметрия и узоры в дизайне музыкальных инструментов", "crit": "Узнаёт и применяет симметрию в дизайне музыкальных инструментов.", "plan": ["Изучить виды симметрии (осевая, центральная, поворотная).", "Проанализировать узоры и симметрию в дизайне (например, орнамент на грифе гитары или корпусе скрипки).", "Нарисовать или изготовить эскиз музыкального инструмента с использованием симметрии."], "forms": [{"h": "Творческая работа", "i": ["Создать собственный дизайн инструмента с использованием геометрической симметрии.", "Выполнить чертежи, макеты или 3D-модели."]}, {"h": "Выставка работ", "i": ["Организовать экспозицию студенческих проектов с краткими пояснениями."]}, {"h": "Кейс-исследование", "i": ["Проанализировать существующие музыкальные инструменты (гармонь, балалайка, фортепиано) с точки зрения симметрии и декоративных узоров."]}], "lit": ["В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 10 класса общественно-гуманитарного направления. Алматы: «Мектеп», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 11 класса общественно-гуманитарного направления. Алматы: «Мектеп», 2020.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 10 класса естественно-математического направления. Алматы: «Мектеп», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 11 класса естественно-математического направления. Алматы: «Мектеп», 2020.", "Е.Н. Шыныбеков, Д.Э. Шыныбеков, Р.Н. Жумабаев. Геометрия: учебник для 11 класса естественно-математического направления. Алматы: «Атамура», 2020.", "Symmetry in Geometry and Music (Springer, на английском языке).", "Исследование симметрии в искусстве (Art of Mathematics)."]}, "links": {"ru": [{"t": "Симметрия — Википедия", "u": "https://ru.wikipedia.org/wiki/Симметрия"}, {"t": "GeoGebra — графики, построения и геометрия онлайн", "u": "https://www.geogebra.org/graphing"}], "kk": [{"t": "Симметрия сызықтары: оқыту жоспары мен тапсырмалар", "u": "https://stud.kz/sabak-zhospary/id/11831"}, {"t": "6-сынып математикасы: осьтік симметрия бойынша сабақ жоспары", "u": "https://stud.kz/sabak-zhospary/id/10737"}, {"t": "GeoGebra — графиктер мен геометриялық салуларды онлайн құру", "u": "https://www.geogebra.org/graphing"}]}, "hints": {"ru": [{"how": ["Опишите три вида: осевая (зеркальная), центральная (поворот на 180°), поворотная (поворот на 360°/n).", "Приведите по одному примеру из окружающих предметов."], "err": "Путают осевую симметрию с центральной."}, {"how": ["Возьмите фото инструмента (гитара, домбра, кобыз, скрипка) и проведите ось симметрии.", "Найдите повторяющиеся элементы узора и определите вид симметрии."], "err": "Ось проведена «на глаз», без проверки по фото."}, {"how": ["Нарисуйте эскиз на бумаге в клетку или в GeoGebra: сначала половину, затем отразите.", "Подпишите, какие виды симметрии использованы и где."], "err": "Эскиз без пояснений, какая симметрия применена."}], "kk": [{"how": ["Үш түрін сипаттаңыз: осьтік (айнадағы), орталық (180° бұру), айналмалы (360°/n бұру).", "Айналадағы заттардан әрқайсысына бір мысал келтіріңіз."], "err": "Осьтік симметрияны орталық симметриямен шатастырады."}, {"how": ["Аспаптың (гитара, домбыра, қобыз, скрипка) фотосын алып, симметрия осін жүргізіңіз.", "Өрнектің қайталанатын элементтерін тауып, симметрия түрін анықтаңыз."], "err": "Ось фото бойынша тексерілмей, «көзбен» жүргізіледі."}, {"how": ["Эскизді тор қағазға немесе GeoGebra-да салыңыз: алдымен жартысын, сосын оны шағылыстырыңыз.", "Қандай симметрия түрлері қайда қолданылғанын жазыңыз."], "err": "Эскиз қандай симметрия қолданылғанын түсіндірусіз беріледі."}]}}, {"n": 12, "hours": 2, "kk": {"title": "Концерт залдарының акустикасы және геометриялық формалары", "crit": "Геометрияның акустикаға қалай әсер ететінін түсінеді және бұл білімді жобалауда қолдана алады.", "plan": ["Залдардың негізгі геометриялық пішіндерін қарастыру (тіктөртбұрыш, шеңбер, эллипс).", "Пішіннің дыбыс толқындарының шағылысуына қалай әсер ететінін зерттеу.", "Жобаны орындау: акустикалық параметрлерді ескере отырып, концерт залының дизайнын жасау."], "forms": [{"h": "Интерактивті жоба", "i": ["Акустиканы ескере отырып, концерт залының макетін немесе эскизін жасау.", "Модельдеу бағдарламаларын пайдалану (SketchUp, AutoCAD)."]}, {"h": "Пікірталас немесе талқылау", "i": ["Залдардың әртүрлі геометриялық формаларының артықшылықтары мен кемшіліктерін талқылау (тіктөртбұрышты, дөңгелек, эллиптикалық)."]}, {"h": "Бейне экскурсия", "i": ["Геометрия мен акустикаға баса назар аудара отырып, нақты концерт залына бейне шолу жасау."]}], "lit": ["В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің қоғамдық-гуманитарлық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 10-сыныбына арналған оқулық, Алматы: «Мектеп», 2019 ж.", "В.А.Смирнов, Е.А.Тұяқов, Геометрия: Жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Алматы: «Мектеп», 2020 ж.", "Е.Н. Шыныбеков.,  Д.Э.Шыныбеков,  Р.Н. Жумбаева, геометрия: жалпы білім беретін мектептің жаратылыстану-математикалық бағытындағы 11-сыныбына арналған оқулық, Атамұра, 2020ж.", "Зал акустикасына арналған материалдар:  Acoustic Fields."]}, "ru": {"title": "Акустика концертных залов и их геометрические формы", "crit": "Понимает, как геометрия влияет на акустику, и умеет применять это при проектировании.", "plan": ["Рассмотреть основные геометрические формы залов (прямоугольник, круг, эллипс).", "Исследовать, как форма влияет на отражение звуковых волн.", "Выполнить проект: разработать дизайн концертного зала с учётом акустических параметров."], "forms": [{"h": "Интерактивный проект", "i": ["Создать макет или эскиз концертного зала с учётом акустики.", "Использовать программы моделирования (SketchUp, AutoCAD)."]}, {"h": "Дискуссия или обсуждение", "i": ["Обсудить достоинства и недостатки разных геометрических форм залов (прямоугольной, круглой, эллиптической)."]}, {"h": "Видеоэкскурсия", "i": ["Сделать видеообзор реального концертного зала с акцентом на геометрию и акустику."]}], "lit": ["В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 10 класса общественно-гуманитарного направления. Алматы: «Мектеп», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 11 класса общественно-гуманитарного направления. Алматы: «Мектеп», 2020.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 10 класса естественно-математического направления. Алматы: «Мектеп», 2019.", "В.А. Смирнов, Е.А. Туяков. Геометрия: учебник для 11 класса естественно-математического направления. Алматы: «Мектеп», 2020.", "Е.Н. Шыныбеков, Д.Э. Шыныбеков, Р.Н. Жумабаев. Геометрия: учебник для 11 класса естественно-математического направления. Алматы: «Атамура», 2020.", "Материалы по акустике залов (Acoustic Fields)."]}, "links": {"ru": [{"t": "Архитектурная акустика — энциклопедический словарь", "u": "https://dic.academic.ru/dic.nsf/ruwiki/1722170"}, {"t": "Архитектурная акустика — Большая российская энциклопедия", "u": "https://bigenc.ru/c/arkhitekturnaia-akustika-0847f9"}, {"t": "SketchUp — 3D-моделирование (макет зала)", "u": "https://www.sketchup.com/"}], "kk": [{"t": "Көлденең және бойлық толқындар: интерференция, дифракция және дыбыстың таралуы", "u": "https://stud.kz/prezentatsiya/id/32558"}, {"t": "Қазақша Уикипедиядан іздеу: акустика", "u": "https://kk.wikipedia.org/w/index.php?search=акустика"}, {"t": "SketchUp — 3D үлгілеу (зал макеті)", "u": "https://www.sketchup.com/"}]}, "hints": {"ru": [{"how": ["Нарисуйте план для трёх форм: прямоугольник, круг, эллипс.", "Для каждой отметьте источник звука и покажите 2–3 луча с отражением (угол падения равен углу отражения)."], "err": "Углы отражения нарисованы «на глаз»."}, {"how": ["В эллипсе звук из одного фокуса после отражения собирается в другом фокусе. В круглом зале возможна концентрация звука и эхо.", "Запишите, к чему это приводит: эхо, «мёртвые» зоны, хороший или плохой звук для слушателя."], "err": "Не объясняют, как форма влияет на слушателя."}, {"how": ["Выберите форму зала и нарисуйте эскиз с размерами, сценой и местами слушателей.", "Проверьте, нет ли точки, где отражённые лучи собираются. Предложите решение: скошенные стены, акустические панели."], "err": "Эскиз красивый, но без объяснения акустики."}], "kk": [{"how": ["Үш пішінге жоспар салыңыз: тіктөртбұрыш, шеңбер, эллипс.", "Әрқайсысына дыбыс көзін белгілеп, шағылысатын 2–3 сәулені көрсетіңіз (түсу бұрышы шағылу бұрышына тең)."], "err": "Шағылу бұрыштары «көзбен» салынады."}, {"how": ["Эллипсте бір фокустан шыққан дыбыс шағылысқаннан кейін екінші фокуста жиналады. Дөңгелек залда дыбыс шоғырлануы және жаңғырық болуы мүмкін.", "Бұл неге әкелетінін жазыңыз: жаңғырық, «өлі» аймақтар, тыңдаушыға жақсы немесе нашар дыбыс."], "err": "Пішіннің тыңдаушыға әсері түсіндірілмейді."}, {"how": ["Зал пішінін таңдап, өлшемдері, сахнасы және тыңдаушы орындары бар эскиз салыңыз.", "Шағылған сәулелер жиналатын нүкте бар-жоғын тексеріңіз. Шешім ұсыныңыз: қиғаш қабырғалар, акустикалық панельдер."], "err": "Эскиз әдемі, бірақ акустика түсіндірілмеген."}]}}], "general": {"ru": [{"t": "Математика в музыке — статья", "u": "https://vk.ru/@sarov_msu_ru-matematika-v-muzyke"}, {"t": "Khan Academy: математика на русском языке", "u": "https://ru.khanacademy.org/math"}], "kk": [{"t": "Математика мен музыка: дыбыстық үйлесімділік пен музыкалық жүйелердің математикалық негіздері", "u": "https://stud.kz/referat/show/3286"}, {"t": "Математика және музыка: үндестік пен қобыздың математикалық талдауы", "u": "https://stud.kz/referat/show/83712"}]}, "tables": {"1": {"step": 1, "views": [2, 3], "type": "line", "cols": [{"t": {"ru": "Время t, с", "kk": "Уақыт t, с"}, "s": "t", "kind": "x"}, {"t": {"ru": "Громкость A, дБ", "kk": "Қаттылық A, дБ"}, "s": "A", "kind": "y"}], "plot": [1], "an": ["extrema", "monotone"], "min": 3, "sample": [[0, 0], [1, 5], [2, 8], [3, 9], [4, 8], [5, 5], [6, 0]]}, "2": {"step": 2, "views": [3], "type": "line", "cols": [{"t": {"ru": "Время t, мс", "kk": "Уақыт t, мс"}, "s": "t", "kind": "x"}, {"t": {"ru": "y = sin(2π·440·t)", "kk": "y = sin(2π·440·t)"}, "s": "y", "kind": "y"}], "plot": [1], "an": ["zeros"], "min": 4, "sample": [[0.0, 0.0], [0.2, 0.525], [0.4, 0.894], [0.6, 0.996], [0.8, 0.802], [1.0, 0.368], [1.2, -0.175], [1.4, -0.666], [1.6, -0.959], [1.8, -0.965], [2.0, -0.685], [2.2, -0.2], [2.4, 0.345]]}, "3": {"step": 1, "views": [2, 3], "type": "line", "cols": [{"t": {"ru": "Вход x", "kk": "Кіру x"}, "s": "x", "kind": "x"}, {"t": {"ru": "Линейно y = x", "kk": "Сызықтық y = x"}, "s": "y₁", "kind": "y"}, {"t": {"ru": "С искажением y = x + 0,2x³", "kk": "Бұрмалаумен y = x + 0,2x³"}, "s": "y₂", "kind": "y"}], "plot": [1, 2], "an": ["maxdiff"], "min": 3, "sample": [[0, 0, 0.0], [0.5, 0.5, 0.525], [1, 1, 1.2], [1.5, 1.5, 2.175], [2, 2, 3.6]]}, "4": {"step": 1, "views": [2, 3], "type": "line", "cols": [{"t": {"ru": "Время t, с", "kk": "Уақыт t, с"}, "s": "t", "kind": "x"}, {"t": {"ru": "Громкость A, усл. ед.", "kk": "Қаттылық A, шартты бірлік"}, "s": "A", "kind": "y"}], "plot": [1], "an": ["expfit"], "min": 3, "sample": [[0, 10.0], [1, 7.047], [2, 4.966], [3, 3.499], [4, 2.466], [5, 1.738]]}, "5": {"step": 3, "views": [], "type": "line", "cols": [{"t": {"ru": "Время t, с", "kk": "Уақыт t, с"}, "s": "t", "kind": "x"}, {"t": {"ru": "Громкость A(t)", "kk": "Қаттылық A(t)"}, "s": "A", "kind": "y"}, {"t": {"ru": "Скорость A′(t) (считается само)", "kk": "Жылдамдық A′(t) (өзі есептеледі)"}, "s": "A′", "kind": "calc", "fn": "diff", "of": 1}], "plot": [1, 2], "an": ["extrema", "monotone"], "min": 4, "sample": [[0.0, 0.0], [0.5, 3.125], [1.0, 4.0], [1.5, 3.375], [2.0, 2.0], [2.5, 0.625], [3.0, 0.0], [3.5, 0.875], [4.0, 4.0]]}, "6": {"step": 1, "views": [2, 3], "type": "line", "cols": [{"t": {"ru": "Время t, с", "kk": "Уақыт t, с"}, "s": "t", "kind": "x"}, {"t": {"ru": "Сигнал A(t)", "kk": "Сигнал A(t)"}, "s": "A", "kind": "y"}, {"t": {"ru": "A² (считается само)", "kk": "A² (өзі есептеледі)"}, "s": "A²", "kind": "calc", "fn": "sq", "of": 1}], "plot": [1, 2], "an": ["integral"], "min": 3, "sample": [[0.0, 2.0], [0.25, 1.558], [0.5, 1.213], [0.75, 0.945], [1.0, 0.736], [1.25, 0.573], [1.5, 0.446], [1.75, 0.348], [2.0, 0.271], [2.25, 0.211], [2.5, 0.164], [2.75, 0.128], [3.0, 0.1]]}, "7": {"step": 1, "views": [2, 3], "type": "bar", "cols": [{"t": {"ru": "Нота", "kk": "Нота"}, "s": "нота", "kind": "text"}, {"t": {"ru": "Сколько раз", "kk": "Неше рет"}, "s": "n", "kind": "y"}, {"t": {"ru": "Доля (считается сама)", "kk": "Үлесі (өзі есептеледі)"}, "s": "доля", "kind": "calc", "fn": "share", "of": 1}], "plot": [1], "an": ["hist"], "min": 2, "sample": [["до", 6], ["ре", 4], ["ми", 7], ["фа", 3], ["соль", 8], ["ля", 5], ["си", 2]]}, "8": {"step": 2, "views": [], "type": "bar", "cols": [{"t": {"ru": "Инструмент", "kk": "Аспап"}, "s": "инстр.", "kind": "text"}, {"t": {"ru": "Объём, л", "kk": "Көлемі, л"}, "s": "V", "kind": "y"}], "plot": [1], "an": ["bars"], "min": 2, "sample": [["Скрипка", 2], ["Домбра", 6], ["Гитара", 20], ["Барабан", 40]]}, "9": {"step": 1, "views": [2, 3], "type": "line", "cols": [{"t": {"ru": "Угол, °", "kk": "Бұрыш, °"}, "s": "α", "kind": "x"}, {"t": {"ru": "y = sin α", "kk": "y = sin α"}, "s": "y", "kind": "y"}], "plot": [1], "an": ["extrema", "zeros"], "min": 5, "sample": [[0, 0.0], [30, 0.5], [60, 0.866], [90, 1.0], [120, 0.866], [150, 0.5], [180, 0.0], [210, -0.5], [240, -0.866], [270, -1.0], [300, -0.866], [330, -0.5], [360, -0.0]]}, "10": {"step": 2, "views": [3], "type": "bar", "cols": [{"t": {"ru": "Пара размеров", "kk": "Өлшем жұбы"}, "s": "пара", "kind": "text"}, {"t": {"ru": "Большая часть, мм", "kk": "Үлкен бөлік, мм"}, "s": "a", "kind": "y"}, {"t": {"ru": "Меньшая часть, мм", "kk": "Кіші бөлік, мм"}, "s": "b", "kind": "y"}, {"t": {"ru": "a / b (считается само)", "kk": "a / b (өзі есептеледі)"}, "s": "a/b", "kind": "calc", "fn": "ratio", "of": 1, "of2": 2}, {"t": {"ru": "Отклонение от φ, % (само)", "kk": "φ-ден ауытқу, % (өзі)"}, "s": "откл.", "kind": "calc", "fn": "dev", "of": 1, "of2": 2}], "plot": [3], "an": ["phi"], "min": 2, "ref": {"v": 1.618, "t": "φ = 1,618"}, "sample": [["Корпус / гриф", 330, 200], ["Верх / низ корпуса", 250, 160], ["Гриф / головка", 200, 120]]}}};
+const TASKS = DATA.tasks;
+
+/* ---------- language ---------- */
+let L = 'ru';
+try { const s = localStorage.getItem('srs-lang'); if (s==='kk'||s==='ru') L = s; else if ((navigator.language||'').toLowerCase().startsWith('kk')) L='kk'; } catch(_){}
+const I = {
+ru:{
+ sub:(n,h)=>`Математика · Отделение МО · ${n} заданий, ${h} ч`, student:'Студент', teacher:'Педагог', role:'Роль', lang:'Язык',
+ tPlanS:'Мои задания', tRules:'Памятка', tPlanT:'График', tReview:'Проверка', tJournal:'Журнал',
+ demo:'Демо-режим: данные хранятся только в этом окне. Общий журнал, сохранение и роли заработают, когда педагог откроет ссылку на страницу, выдаст студентам доступ «Участник» и войдёт под своей учётной записью.',
+ myPlan:'График самостоятельной работы', myPlanP:'Выполняйте задание по шагам и сдавайте в срок. Оценка выставляется по критериям из памятки после защиты работы.',
+ graded:'оценено', avg:'средний балл', gpa:'GPA', intro:'Представьтесь', introP:'Имя увидит педагог в журнале.', fio:'ФИО', group:'Группа', groupPh:'Например: 1 курс, Теория музыки', save:'Сохранить', enterName:'Введите имя',
+ next:'Ближайший срок', open:'Открыть', cont:'Продолжить', until:'до', overdue:'просрочено', noDue:'срок не задан', tasks:'задания', task:'Задание', hrs:'ч',
+ grp:['Алгебра и начала анализа','Статистика и геометрия'],
+ st:{new:'Не начато',draft:'В работе',submitted:'На проверке',returned:'На доработке',graded:'Оценено'},
+ allTasks:'← Все задания', crit:'Критерий оценивания', materials:'Материалы', mainLit:'Основная литература', extraLit:'Дополнительные материалы в интернете', extraNote:'Ссылки открываются в новой вкладке.', tools:'Инструменты',
+ stepOf:(a,b)=>`Шаг ${a} из ${b}`, sIntro:'Знакомство', sForm:'Форма', sStep:n=>`Шаг ${n}`, sSum:'Итоги', sSubmit:'Сдача',
+ introT:'Знакомство с заданием', introP:'Задание выполняется по шагам. Результат каждого шага записывайте здесь: так педагог увидит ход вашей работы.', plan:'План работы', deadline:'Срок сдачи', hours:'Объём',
+ formT:'Выберите форму выполнения', formP:'Можно выбрать одну или несколько форм из программы. Выбор можно изменить позже.', formNeed:'Выберите хотя бы одну форму, чтобы продолжить.',
+ stepT:'Результат шага', stepHint:'Запишите ход решения, расчёты, наблюдения и вывод. Минимум 10 символов.', stepPh:'Что вы сделали и что получилось', stepNeed:'Запишите результат шага, чтобы продолжить.', chosen:'Выбранная форма',
+ sumT:'Итоги работы', sumP:'Сформулируйте общий вывод и приложите ссылку на файл, таблицу или презентацию (необязательно).', concl:'Общий вывод', link:'Ссылка на файл или презентацию',
+ checkT:'Самопроверка и сдача', checkP:'Проверьте работу перед сдачей.', self:['Тема раскрыта полно, цель работы достигнута','Использованы учебники и дополнительные источники','Работа выполнена мной лично','Сформулированы обобщение и выводы','Оформление соответствует требованиям педагога'],
+ selfNeed:'Отметьте все пункты самопроверки и выполните все шаги, чтобы сдать работу.', submit:'Сдать на проверку', resubmit:'Сдать повторно', withdraw:'Отозвать', submitted:'Работа сдана',
+ submittedOn:d=>`Сдано ${d}. Педагог проверит работу и оценит защиту.`, back:'Назад', nextBtn:'Далее', toSubmit:'К сдаче', saved:'Сохранено', saving:'Сохранение…',
+ result:'Результат', returnedT:'Возвращено на доработку', outOf:'из',
+ tPlanH:'График СРС', tPlanP:'Укажите срок сдачи каждого задания. Студенты видят изменения сразу.', colTask:'Задание', colHrs:'Часы', colDue:'Срок сдачи', colSub:'Сдано', colGr:'Оценено', dueFor:n=>`Срок задания ${n}`,
+ revH:'Проверка', revP:'Оценка складывается из девяти критериев методических указаний: содержание, источники, самостоятельность, грамотность, анализ, оформление и защита.', queueEmpty:'Очередь пуста. Новые работы появятся здесь, когда студенты сдадут задания.', pick:'Выберите работу из списка.', submittedShort:'сдано',
+ critShort:'Критерий', formsPicked:'Выбранные формы', stepsT:'Ход работы', noText:'Текст не приложен', conclT:'Общий вывод', comment:'Комментарий', setGrade:'Выставить оценку', ret:'Вернуть на доработку', total:'Итого', need:'Напишите комментарий: что нужно доработать', graded2:'Оценка выставлена', returned2:'Работа возвращена студенту',
+ jH:'Журнал', jP:'Баллы по каждому заданию, средний балл и GPA по шкале 4,0.', csv:'Скачать CSV',
+ saNote:'Автономная версия: работа сохраняется только в этом браузере на этом устройстве (не очищайте данные сайта). Чтобы сдать, нажмите «Сдать на проверку», скачайте отчёт в Word на последнем шаге и отправьте файл преподавателю.',
+ rstBtn:'Сбросить задание', rstAsk:'Удалить все ответы, таблицу, рисунки и отметки в этом задании и начать заново? Это нельзя отменить.', rstYes:'Да, сбросить', rstNo:'Отмена', rstDone:'Задание сброшено.',
+ rpT:'Отчёт в Word', rpP:'Соберите готовый отчёт: титульный лист, содержание, таблицы, графики, рисунки и список литературы.', college:'Учебное заведение', collegePh:'Например: колледж искусств', teacher:'Преподаватель (ФИО)', teacherPh:'Фамилия И.О.', refsT:'Использованная литература', refsP:'Отметьте только то, чем вы действительно пользовались.', refsLit:'Основная литература', refsWeb:'Ресурсы в интернете', docxBtn:'Скачать отчёт (.docx)', docxBusy:'Готовим файл…', docxFail:'Не удалось собрать файл: ', docxNo:'Скачивание недоступно в этом окне. Откройте страницу целиком.', docxTip:'После открытия в Word нажмите «Да» на вопрос об обновлении полей — тогда заполнится содержание с номерами страниц.', imgT:'Рисунки и иллюстрации', imgP:'Добавьте фото или скан своего чертежа, расчёта, нотного примера. Графики из таблицы добавятся в отчёт автоматически.', imgAdd:'Добавить рисунок', imgCap:'Подпись к рисунку', imgDel:'Удалить', imgMax:'Не больше 3 рисунков в задании.', imgBig:'Рисунки заняли весь лимит памяти. Удалите лишние.', imgBad:'Не удалось открыть изображение.',
+ jNone:'Пока нет ни одного студента. Они появятся, когда откроют страницу и введут имя.', jLegend:'· не начато · … в работе · ✓ на проверке · ↺ на доработке · число — оценка. Нажмите ячейку, чтобы открыть работу.', avgS:'Средн.', student1:'Студент', noName:'Без имени', demoStud:n=>`Пример: студент ${n}`,
+ csvNo:'Скачивание недоступно в этом окне', csvFail:'Файл не сохранён', fail:'Не удалось сохранить: ', failG:'Не удалось сохранить оценку: ', failC:'Не удалось сохранить сроки: ',
+ rub:[['Содержание: тема, полнота и глубина',25],['Проработка литературных источников',10],['Самостоятельность выполнения',10],['Грамотность и чёткость изложения',10],['Обобщение, анализ, выводы',15],['Технические требования к оформлению',10],['Полнота ответов при защите',10],['Ответы на дополнительные вопросы',5],['Умение отстаивать свою позицию',5]],
+ memoH:'Памятка по СРС', memoP:'Основные требования из методических указаний по организации СРС и СРСП в ТиППО.',
+ m1:'Что такое СРС и СРСП', m1l:['<b>СРС</b> — работа полностью самостоятельная, по заранее заданному перечню тем. Часы СРС не входят в расписание и оплачиваемую нагрузку педагога.','<b>СРСП</b> — самостоятельная работа под руководством педагога, проходит по расписанию. Её объём не более 30% от объёма дисциплины или модуля.','Порядок и сроки СРС педагог сообщает на занятии. Все задания сдаются в установленные сроки.'],
+ m2:'Каким должно быть задание', m2l:['Выполнено лично студентом или является его самостоятельной частью коллективной работы.','Представляет законченную разработку по актуальной проблеме темы.','Показывает достаточную компетентность автора и имеет учебную или практическую значимость.','Не предполагает действий, опасных для здоровья. Измерения инструментов делайте аккуратно и только с разрешения владельца.'],
+ m3:'Как проходит приём работы', m3l:['Педагог оценивает содержание, источники, самостоятельность, грамотность, анализ и выводы, оформление.','Затем защита: полнота ответов, дополнительные вопросы, умение отстаивать позицию.','Оценка за СРС вносится в оценочный лист в виде дескриптора.','Тему можно обсудить с педагогом и изменить в рамках предоставленного материала.'],
+ m4:'Критерии и баллы', m5:'Буквенная система оценки', m6:'Общие материалы',
+ tblT:'Таблица данных', chartT:'График (строится автоматически)', addRow:'+ Строка', sample:'Подставить пример', clear:'Очистить', del:'Удалить строку', sampleNote:'Пример данных нужен только для проверки: замените его своими.', noData:n=>`Заполните не менее ${n} строк с числами, и график появится сам.`, anT:'Автоматический анализ по таблице', tblNeed:n=>`Заполните таблицу: нужно не менее ${n} строк с числами.`, subNeed:'Отметьте все пункты «Как выполнить».',
+ anMax:(s,y,xs,x)=>`Максимум: ${s} = ${y} при ${xs} = ${x}`, anMin:(s,y,xs,x)=>`Минимум: ${s} = ${y} при ${xs} = ${x}`, anNoExt:'Внутренних экстремумов нет: наибольшее и наименьшее значения на краях.', anInc:(a,b)=>`Растёт на [${a}; ${b}]`, anDec:(a,b)=>`Убывает на [${a}; ${b}]`, anZero:(xs,v)=>`Нуль функции: ${xs} ≈ ${v}`, anNoZero:'Пересечений с осью x нет.',
+ anFit:(k,A,h,r)=>`Модель A = A₀·e^(−kt): k ≈ ${k}, A₀ ≈ ${A}, период полуспада ≈ ${h}, точность (R²) = ${r}`, anFitBad:'Для оценки k нужны положительные значения A.', anInt:v=>`Площадь под кривой A (метод трапеций): ${v}`, anInt2:v=>`Площадь под A² (энергия): ${v}`,
+ anTotal:n=>`Всего нот: ${n}`, anMode:(m,c)=>`Мода (самая частая): ${m}, ${c} раз`, anBarMax:(l,v)=>`Наибольшее значение: ${l} — ${v}`, anBarMin:(l,v)=>`Наименьшее значение: ${l} — ${v}`, anPhi:(m,k,n)=>`Среднее a/b = ${m}. Близко к φ (в пределах 5%): ${k} из ${n}`, anDiff:(d,x)=>`Наибольшая разница между линиями: ${d} при x = ${x}`,
+ hintT:'Подсказки к шагу', howT:'Как выполнить', errT:'Частая ошибка', rubShow:'Как вас оценят',
+ introTipsT:'Как успешно выполнить задание', introTips:['Начните заранее: на задание отведено 2 часа работы, но результат лучше готовить в несколько подходов до срока.','Идите по шагам и записывайте результат сразу, пока помните, что делали.','Записывайте источники: название и ссылку, чтобы потом указать их в работе.','Работайте самостоятельно: опирайтесь на подсказки, но формулируйте выводы своими словами.','Перед сдачей сверьтесь с критериями оценки ниже.'],
+ formTipsT:'Как выбрать форму', formTips:['Выберите форму, которую успеете выполнить к сроку с тем, что у вас есть: инструмент, компьютер, время.','Для групповой формы заранее договоритесь, что делает каждый.','Если сомневаетесь, обсудите выбор с педагогом на занятии СРСП.'],
+ sumTipsT:'Как написать вывод', sumTips:['Вывод — 3–5 предложений: что вы сделали, что получили и что это значит для музыки.','Вернитесь к критерию оценивания: ответили ли вы на поставленную цель?','Добавьте ссылку на график, таблицу или презентацию, чтобы педагог мог их посмотреть.'],
+ subTipsT:'Подготовка к защите', subTips:['Что вы сделали и зачем?','Как вы получили результат? Будьте готовы показать ключевой расчёт или график.','Что бы вы улучшили, если бы повторили работу?']
+},
+kk:{
+ sub:(n,h)=>`Математика · МО бөлімі · ${n} тапсырма, ${h} сағ`, student:'Студент', teacher:'Оқытушы', role:'Рөл', lang:'Тіл',
+ tPlanS:'Менің тапсырмаларым', tRules:'Жадынама', tPlanT:'Кесте', tReview:'Тексеру', tJournal:'Журнал',
+ demo:'Демо-режим: деректер тек осы терезеде сақталады. Ортақ журнал, сақтау және рөлдер оқытушы бетті ашып, студенттерге «Қатысушы» рұқсатын беріп, өз тіркелгісімен кірген соң жұмыс істейді.',
+ myPlan:'Өздік жұмыс кестесі', myPlanP:'Тапсырманы қадам-қадаммен орындап, мерзімінде тапсырыңыз. Жұмысты қорғағаннан кейін жадынамадағы өлшемдер бойынша баға қойылады.',
+ graded:'бағаланды', avg:'орташа балл', gpa:'GPA', intro:'Өзіңізді таныстырыңыз', introP:'Аты-жөніңізді оқытушы журналдан көреді.', fio:'Аты-жөні', group:'Топ', groupPh:'Мысалы: 1 курс, Музыка теориясы', save:'Сақтау', enterName:'Атыңызды енгізіңіз',
+ next:'Жақын мерзім', open:'Ашу', cont:'Жалғастыру', until:'дейін', overdue:'мерзімі өтті', noDue:'мерзімі белгіленбеген', tasks:'тапсырмалар', task:'Тапсырма', hrs:'сағ',
+ grp:['Алгебра және анализ бастамалары','Статистика және геометрия'],
+ st:{new:'Басталмаған',draft:'Орындалуда',submitted:'Тексеруде',returned:'Қайта өңдеуге қайтарылды',graded:'Бағаланды'},
+ allTasks:'← Барлық тапсырмалар', crit:'Бағалау өлшемі', materials:'Материалдар', mainLit:'Негізгі әдебиет', extraLit:'Интернеттегі қосымша материалдар', extraNote:'Сілтемелер жаңа бетте ашылады.', tools:'Құралдар',
+ stepOf:(a,b)=>`${b} қадамның ${a}-і`, sIntro:'Танысу', sForm:'Нысан', sStep:n=>`${n}-қадам`, sSum:'Қорытынды', sSubmit:'Тапсыру',
+ introT:'Тапсырмамен танысу', introP:'Тапсырма қадам-қадаммен орындалады. Әр қадамның нәтижесін осында жазыңыз: сонда оқытушы жұмыс барысын көреді.', plan:'Жұмыс жоспары', deadline:'Тапсыру мерзімі', hours:'Көлемі',
+ formT:'Орындау нысанын таңдаңыз', formP:'Бағдарламадағы нысандардың біреуін немесе бірнешеуін таңдауға болады. Таңдауды кейін өзгертуге болады.', formNeed:'Жалғастыру үшін кемінде бір нысанды таңдаңыз.',
+ stepT:'Қадам нәтижесі', stepHint:'Шешу барысын, есептеулерді, бақылауларды және қорытындыны жазыңыз. Кемінде 10 таңба.', stepPh:'Не істедіңіз және не шықты', stepNeed:'Жалғастыру үшін қадам нәтижесін жазыңыз.', chosen:'Таңдалған нысан',
+ sumT:'Жұмыс қорытындысы', sumP:'Жалпы қорытындыны жазып, файлға, кестеге немесе презентацияға сілтеме қосыңыз (міндетті емес).', concl:'Жалпы қорытынды', link:'Файлға немесе презентацияға сілтеме',
+ checkT:'Өзін-өзі тексеру және тапсыру', checkP:'Тапсырар алдында жұмысты тексеріңіз.', self:['Тақырып толық ашылды, жұмыстың мақсатына қол жеткізілді','Оқулықтар мен қосымша дереккөздер пайдаланылды','Жұмысты өзім орындадым','Жалпылау мен қорытындылар жасалды','Рәсімдеу оқытушы талаптарына сәйкес'],
+ selfNeed:'Жұмысты тапсыру үшін барлық қадамды орындап, өзін-өзі тексеру тармақтарын белгілеңіз.', submit:'Тексеруге тапсыру', resubmit:'Қайта тапсыру', withdraw:'Кері алу', submitted:'Жұмыс тапсырылды',
+ submittedOn:d=>`Тапсырылған күні: ${d}. Оқытушы жұмысты тексеріп, қорғауды бағалайды.`, back:'Артқа', nextBtn:'Әрі қарай', toSubmit:'Тапсыруға', saved:'Сақталды', saving:'Сақталуда…',
+ result:'Нәтиже', returnedT:'Қайта өңдеуге қайтарылды', outOf:'/',
+ tPlanH:'СӨЖ кестесі', tPlanP:'Әр тапсырманың тапсыру мерзімін көрсетіңіз. Студенттер өзгерістерді бірден көреді.', colTask:'Тапсырма', colHrs:'Сағат', colDue:'Тапсыру мерзімі', colSub:'Тапсырылды', colGr:'Бағаланды', dueFor:n=>`${n}-тапсырма мерзімі`,
+ revH:'Тексеру', revP:'Баға әдістемелік нұсқаулықтағы тоғыз өлшемнен құралады: мазмұн, дереккөздер, өз бетінше орындау, сауаттылық, талдау, рәсімдеу және қорғау.', queueEmpty:'Кезек бос. Студенттер тапсырма тапсырғанда жаңа жұмыстар осында шығады.', pick:'Тізімнен жұмысты таңдаңыз.', submittedShort:'тапсырылды',
+ critShort:'Өлшем', formsPicked:'Таңдалған нысандар', stepsT:'Жұмыс барысы', noText:'Мәтін қосылмаған', conclT:'Жалпы қорытынды', comment:'Пікір', setGrade:'Баға қою', ret:'Қайта өңдеуге қайтару', total:'Барлығы', need:'Пікір жазыңыз: нені жетілдіру керек', graded2:'Баға қойылды', returned2:'Жұмыс студентке қайтарылды',
+ jH:'Журнал', jP:'Әр тапсырма бойынша балл, орташа балл және 4,0 шәкілі бойынша GPA.', csv:'CSV жүктеу',
+ saNote:'Дербес нұсқа: жұмыс тек осы браузерде, осы құрылғыда сақталады (сайт деректерін тазаламаңыз). Тапсыру үшін «Тексеруге тапсыру» батырмасын басыңыз, соңғы қадамда есепті Word-қа жүктеп, файлды оқытушыға жіберіңіз.',
+ rstBtn:'Тапсырманы қалпына келтіру', rstAsk:'Осы тапсырмадағы барлық жауапты, кестені, суреттер мен белгілерді жойып, қайта бастау керек пе? Мұны қайтару мүмкін емес.', rstYes:'Иә, қалпына келтіру', rstNo:'Бас тарту', rstDone:'Тапсырма қалпына келтірілді.',
+ rpT:'Word-тағы есеп', rpP:'Дайын есепті жинаңыз: титул беті, мазмұны, кестелер, графиктер, суреттер және әдебиеттер тізімі.', college:'Оқу орны', collegePh:'Мысалы: өнер колледжі', teacher:'Оқытушы (аты-жөні)', teacherPh:'Тегі А.Ә.', refsT:'Пайдаланылған әдебиеттер', refsP:'Тек шын мәнінде пайдаланғандарыңызды белгілеңіз.', refsLit:'Негізгі әдебиет', refsWeb:'Интернет-ресурстар', docxBtn:'Есепті жүктеу (.docx)', docxBusy:'Файл дайындалуда…', docxFail:'Файлды жинау мүмкін болмады: ', docxNo:'Бұл терезеде жүктеу қолжетімсіз. Бетті толық ашыңыз.', docxTip:'Word-та ашқанда өрістерді жаңарту туралы сұраққа «Иә» деп жауап беріңіз — сонда мазмұн бет нөмірлерімен толады.', imgT:'Суреттер мен иллюстрациялар', imgP:'Өз сызбаңыздың, есептеуіңіздің, нота мысалының фотосын немесе сканын қосыңыз. Кестедегі графиктер есепке өздігінен қосылады.', imgAdd:'Сурет қосу', imgCap:'Сурет жазуы', imgDel:'Жою', imgMax:'Тапсырмада 3 суреттен артық болмауы керек.', imgBig:'Суреттер жад шегін толтырды. Артығын жойыңыз.', imgBad:'Суретті ашу мүмкін болмады.',
+ jNone:'Әзірге студент жоқ. Олар бетті ашып, атын енгізгенде пайда болады.', jLegend:'· басталмаған · … орындалуда · ✓ тексеруде · ↺ қайта өңдеуде · сан — баға. Жұмысты ашу үшін ұяшықты басыңыз.', avgS:'Орташа', student1:'Студент', noName:'Атысыз', demoStud:n=>`Мысал: ${n}-студент`,
+ csvNo:'Бұл терезеде жүктеу қолжетімсіз', csvFail:'Файл сақталмады', fail:'Сақтау мүмкін болмады: ', failG:'Бағаны сақтау мүмкін болмады: ', failC:'Мерзімдерді сақтау мүмкін болмады: ',
+ rub:[['Мазмұны: тақырыптың ашылуы, толықтығы мен тереңдігі',25],['Әдебиет көздерін пайдалану',10],['Жұмыстың өз бетінше орындалуы',10],['Сауаттылық және баяндаудың анықтығы',10],['Жалпылау, талдау, қорытынды',15],['Рәсімдеуге қойылатын техникалық талаптар',10],['Қорғау кезіндегі жауаптардың толықтығы',10],['Қосымша сұрақтарға жауаптар',5],['Өз ұстанымын қорғай білу',5]],
+ memoH:'СӨЖ жадынамасы', memoP:'ТжКБ ұйымдарында СӨЖ және СОӨЖ ұйымдастыру жөніндегі әдістемелік нұсқаулықтың негізгі талаптары.',
+ m1:'СӨЖ және СОӨЖ дегеніміз не', m1l:['<b>СӨЖ</b> — алдын ала берілген тақырыптар тізімі бойынша толық өз бетінше орындалатын жұмыс. СӨЖ сағаттары кестеге және оқытушының ақылы жүктемесіне кірмейді.','<b>СОӨЖ</b> — оқытушының жетекшілігімен орындалатын өздік жұмыс, ол сабақ кестесі бойынша өтеді. Көлемі пән немесе модуль көлемінің 30%-ынан аспайды.','СӨЖ тәртібі мен мерзімін оқытушы сабақта хабарлайды. Барлық тапсырма белгіленген мерзімде тапсырылады.'],
+ m2:'Тапсырма қандай болуы керек', m2l:['Студенттің өзі орындаған немесе ұжымдық жұмыстың оның өз бетінше орындаған бөлігі болуы тиіс.','Тақырыптың өзекті мәселесі бойынша аяқталған әзірлеме болуы керек.','Автордың жеткілікті құзыреттілігін көрсетіп, оқу немесе практикалық маңызы болуы тиіс.','Денсаулыққа қауіпті әрекеттерді көздемейді. Аспаптарды өлшеуді мұқият және иесінің рұқсатымен ғана жасаңыз.'],
+ m3:'Жұмыс қалай қабылданады', m3l:['Оқытушы мазмұнды, дереккөздерді, өз бетінше орындауды, сауаттылықты, талдау мен қорытындыны, рәсімдеуді бағалайды.','Содан кейін қорғау: жауаптардың толықтығы, қосымша сұрақтар, өз ұстанымын қорғай білу.','СӨЖ бағасы бағалау парағына дескриптор түрінде енгізіледі.','Тақырыпты оқытушымен талқылап, берілген материал аясында өзгертуге болады.'],
+ m4:'Өлшемдер мен балдар', m5:'Әріптік бағалау жүйесі', m6:'Жалпы материалдар',
+ tblT:'Деректер кестесі', chartT:'График (автоматты түрде салынады)', addRow:'+ Жол', sample:'Мысалды қою', clear:'Тазалау', del:'Жолды жою', sampleNote:'Мысал деректер тек тексеру үшін қажет: оны өз деректеріңізбен ауыстырыңыз.', noData:n=>`Кемінде ${n} жолды сандармен толтырыңыз, график өзі пайда болады.`, anT:'Кесте бойынша автоматты талдау', tblNeed:n=>`Кестені толтырыңыз: кемінде ${n} жол сандармен керек.`, subNeed:'«Қалай орындау керек» тармақтарының бәрін белгілеңіз.',
+ anMax:(s,y,xs,x)=>`Максимум: ${s} = ${y}, ${xs} = ${x} кезінде`, anMin:(s,y,xs,x)=>`Минимум: ${s} = ${y}, ${xs} = ${x} кезінде`, anNoExt:'Ішкі экстремумдар жоқ: ең үлкен және ең кіші мәндер шеттерінде.', anInc:(a,b)=>`[${a}; ${b}] аралығында өседі`, anDec:(a,b)=>`[${a}; ${b}] аралығында кемиді`, anZero:(xs,v)=>`Функция нөлі: ${xs} ≈ ${v}`, anNoZero:'x осімен қиылысу жоқ.',
+ anFit:(k,A,h,r)=>`A = A₀·e^(−kt) моделі: k ≈ ${k}, A₀ ≈ ${A}, жартылай әлсіреу периоды ≈ ${h}, дәлдігі (R²) = ${r}`, anFitBad:'k-ны бағалау үшін A мәндері оң болуы керек.', anInt:v=>`A қисығы астындағы аудан (трапеция әдісі): ${v}`, anInt2:v=>`A² астындағы аудан (энергия): ${v}`,
+ anTotal:n=>`Барлық нота саны: ${n}`, anMode:(m,c)=>`Мода (ең жиі): ${m}, ${c} рет`, anBarMax:(l,v)=>`Ең үлкен мән: ${l} — ${v}`, anBarMin:(l,v)=>`Ең кіші мән: ${l} — ${v}`, anPhi:(m,k,n)=>`Орташа a/b = ${m}. φ-ге жақын (5% шегінде): ${n} ішінен ${k}`, anDiff:(d,x)=>`Сызықтар арасындағы ең үлкен айырма: ${d}, x = ${x} кезінде`,
+ hintT:'Қадамға кеңестер', howT:'Қалай орындау керек', errT:'Жиі кездесетін қате', rubShow:'Сізді қалай бағалайды',
+ introTipsT:'Тапсырманы сәтті орындау жолдары', introTips:['Алдын ала бастаңыз: тапсырмаға 2 сағат бөлінген, бірақ нәтижені мерзімге дейін бірнеше рет келіп дайындаған жөн.','Қадам-қадаммен жүріңіз және не істегеніңіз есіңізде тұрғанда нәтижені бірден жазыңыз.','Дереккөздерді жазып алыңыз: атауы мен сілтемесін, кейін жұмыста көрсету үшін.','Өз бетінше жұмыс істеңіз: кеңестерге сүйеніңіз, бірақ қорытындыны өз сөзіңізбен жазыңыз.','Тапсырар алдында төмендегі бағалау өлшемдерімен салыстырыңыз.'],
+ formTipsT:'Нысанды қалай таңдау керек', formTips:['Мерзімге үлгеретін, қолыңыздағы құралмен (аспап, компьютер, уақыт) орындай алатын нысанды таңдаңыз.','Топтық нысанда әрқайсысы не істейтінін алдын ала келісіңіз.','Күмәндансаңыз, таңдауды СОӨЖ сабағында оқытушымен талқылаңыз.'],
+ sumTipsT:'Қорытындыны қалай жазу керек', sumTips:['Қорытынды — 3–5 сөйлем: не істедіңіз, не алдыңыз және бұл музыка үшін нені білдіреді.','Бағалау өлшеміне оралыңыз: қойылған мақсатқа жауап бердіңіз бе?','Оқытушы қарай алатындай графикке, кестеге немесе презентацияға сілтеме қосыңыз.'],
+ subTipsT:'Қорғауға дайындық', subTips:['Не істедіңіз және не үшін?','Нәтижені қалай алдыңыз? Негізгі есептеуді немесе графикті көрсетуге дайын болыңыз.','Жұмысты қайталасаңыз, нені жақсартар едіңіз?']
+}};
+const T = () => I[L];
+const SCALE = [[95,'A',4.0],[90,'A-',3.67],[85,'B+',3.33],[80,'B',3.0],[75,'B-',2.67],[70,'C+',2.33],[65,'C',2.0],[60,'C-',1.67],[55,'D+',1.33],[50,'D',1.0],[0,'F',0]];
+const RUBID = ['content','sources','indep','lang','analysis','format','defense','extra','stance'];
+const RUB = () => RUBID.map((id,i)=>[id, T().rub[i][0], T().rub[i][1]]);
+const DEFAULT_DUE = ['2026-10-05','2026-10-19','2026-11-02','2026-11-16','2026-11-30','2026-12-14','2027-02-15','2027-03-01','2027-03-15','2027-04-05','2027-04-19','2027-05-03'];
+const DAY = 864e5, MIN_LEN = 10;
+
+/* ---------- helpers ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = (s, r=document) => r.querySelector(s);
+const clone = o => JSON.parse(JSON.stringify(o ?? null));
+const letter = p => SCALE.find(r => p >= r[0]);
+const loc = () => L==='kk' ? 'kk-KZ' : 'ru-RU';
+const MON={ru:['янв.','февр.','мар.','апр.','мая','июн.','июл.','авг.','сент.','окт.','нояб.','дек.'],kk:['қаң.','ақп.','нау.','сәу.','мам.','мау.','шіл.','там.','қыр.','қаз.','қар.','жел.']};
+const fmtD = d => L==='kk' ? `${d.getFullYear()} ж. ${d.getDate()} ${MON.kk[d.getMonth()]}` : `${d.getDate()} ${MON.ru[d.getMonth()]} ${d.getFullYear()} г.`;
+const fmtDate = iso => iso ? fmtD(new Date(iso+'T00:00:00')) : T().noDue;
+const fmtTs = ts => fmtD(new Date(ts));
+const maxSum = 100;
+const tt = t => t[L];
+const len = s => (s||'').trim().length;
+
+/* ---------- state ---------- */
+const S = { demo:true, canEdit:true, uid:'me', mode:'student', tab:'plan', task:null, step:0, review:null,
+  cfg:{deadlines:Object.fromEntries(DEFAULT_DUE.map((d,i)=>[i+1,d]))}, work:{}, grades:{}, saving:'', toast:'' };
+let db=null, dl=null, saveTimer=null, writeChain=Promise.resolve();
+
+/* ---------- data layer ---------- */
+function seedDemo(){
+  const now=Date.now();
+  const g=(vals,comment,at)=>{const sc={};RUBID.forEach((r,i)=>sc[r]=Math.round(RUB()[i][2]*vals[i%vals.length]));const total=Object.values(sc).reduce((a,b)=>a+b,0);return {scores:sc,total,comment,returned:false,at}};
+  const sub=(at)=>({steps:['—','—','—','—','—'],forms:[true],notes:'—',link:'',self:[true,true,true,true,true],reached:8,step:8,submittedAt:at});
+  S.work.d1={name:'',group:'',tasks:{1:sub(now-9*DAY),2:sub(now-3*DAY)}};
+  S.work.d2={name:'',group:'',tasks:{1:sub(now-8*DAY)}};
+  S.work.d3={name:'',group:'',tasks:{1:{steps:['—'],forms:[true],notes:'',link:'',self:[],reached:2,step:2,submittedAt:null}}};
+  S.grades.d1={tasks:{1:g([.95,.9,1,.9],'',now-6*DAY)}};
+  S.grades.d2={tasks:{1:g([.7,.6,.8,.7],'',now-5*DAY)}};
+}
+function persistWork(){
+  if(S.sa){ try{ localStorage.setItem('srs-work',JSON.stringify(S.work[S.uid])); S.saving='saved'; paintSaving(); }catch(e){ flash(()=>T().fail+(e.message||'')); } return; }
+  if(S.demo||!db) return;
+  const d=clone(S.work[S.uid]);
+  writeChain=writeChain.then(()=>db.doc('work/'+S.uid).set(d)).then(()=>{S.saving='saved';paintSaving()}).catch(e=>flash(()=>T().fail+(e.message||e.code||'')));
+}
+function scheduleSave(){ S.saving='saving'; paintSaving(); clearTimeout(saveTimer); saveTimer=setTimeout(()=>{saveTimer=null;persistWork()},600); }
+function flushSave(){ if(saveTimer){clearTimeout(saveTimer);saveTimer=null;persistWork()} }
+const myDoc = () => S.work[S.uid] ||= {name:'',group:'',tasks:{}};
+const myTask = n => myDoc().tasks[n] ||= {steps:[],forms:[],notes:'',link:'',self:[],step:0,reached:0,submittedAt:null};
+function patchTask(n,patch,now){ Object.assign(myTask(n),patch); if(now){clearTimeout(saveTimer);saveTimer=null;persistWork()} else scheduleSave(); }
+function saveGrade(uid,n,g){
+  const doc=S.grades[uid] ||= {tasks:{}}; doc.tasks[n]=g;
+  if(S.demo||!db) return Promise.resolve();
+  const d=clone(doc);
+  writeChain=writeChain.then(()=>db.doc('grades/'+uid).set(d)).catch(e=>flash(()=>T().failG+(e.message||e.code||'')));
+  return writeChain;
+}
+function saveCfg(){
+  if(S.demo||!db) return;
+  const d=clone(S.cfg);
+  writeChain=writeChain.then(()=>db.doc('config/main').set(d)).catch(e=>flash(()=>T().failC+(e.message||e.code||'')));
+}
+
+/* ---------- derived ---------- */
+function statusOf(uid,n){
+  const w=(S.work[uid]?.tasks||{})[n]||{}, g=(S.grades[uid]?.tasks||{})[n];
+  if(g && (!w.submittedAt || g.at>=w.submittedAt)) return g.returned?'returned':'graded';
+  if(w.submittedAt) return 'submitted';
+  if(w.notes||w.link||(w.steps||[]).some(Boolean)||(w.reached||0)>0) return 'draft';
+  return 'new';
+}
+const gradeOf = (uid,n) => (S.grades[uid]?.tasks||{})[n];
+function summary(uid){
+  let done=0,sum=0,pts=0,sub=0;
+  TASKS.forEach(t=>{const st=statusOf(uid,t.n);if(st==='graded'){done++;const g=gradeOf(uid,t.n);sum+=g.total;pts+=letter(g.total)[2]}if(st==='submitted'||st==='graded')sub++});
+  return {done,sub,avg:done?sum/done:null,gpa:done?pts/done:null};
+}
+const due = n => S.cfg.deadlines?.[n]||'';
+const isLate = (uid,n) => { const d=due(n); if(!d) return false; const st=statusOf(uid,n); return (st==='new'||st==='draft'||st==='returned') && Date.now()>Date.parse(d+'T23:59:59'); };
+const studentUids = () => Object.keys(S.work).filter(u=>S.work[u].name||Object.keys(S.work[u].tasks||{}).length);
+const queue = () => { const q=[]; studentUids().forEach(uid=>TASKS.forEach(t=>{if(statusOf(uid,t.n)==='submitted')q.push({uid,n:t.n,at:S.work[uid].tasks[t.n].submittedAt})})); return q.sort((a,b)=>a.at-b.at); };
+const nameOf = uid => (/^d\d$/.test(uid)&&S.demo) ? T().demoStud(uid[1]) : (S.work[uid]?.name || T().noName);
+const taskOf = n => TASKS.find(x=>x.n===n);
+
+
+/* ---------- data tables + automatic charts ---------- */
+const TB = DATA.tables || {};
+const PHI = 1.618;
+const num = v => { if (v == null) return null; const x = Number(String(v).trim().replace(',', '.')); return String(v).trim() === '' || !isFinite(x) ? null : x; };
+const nf = x => String(+Number(x).toFixed(3)).replace('.', ',');
+const cl = c => c.t[L];
+const tblRows = (w, n) => { const cfg = TB[n]; const r = w.tables?.[n]?.rows; return r && r.length ? r : Array.from({length: 5}, () => Array(cfg.cols.length).fill('')); };
+function model(cfg, rows) {
+  const C = cfg.cols, rc = rows.map(() => C.map(() => null));
+  const valid = []; // indices of rows whose input columns are usable
+  rows.forEach((r, i) => {
+    const ok = C.every((c, j) => c.kind === 'calc' || (c.kind === 'text' ? String(r[j] ?? '').trim() !== '' : num(r[j]) != null));
+    if (ok) valid.push(i);
+  });
+  const numericX = C[0].kind === 'x';
+  if (numericX) valid.sort((a, b) => num(rows[a][0]) - num(rows[b][0]));
+  const val = (i, j) => C[j].kind === 'text' ? String(rows[i][j]).trim() : num(rows[i][j]);
+  // computed columns
+  C.forEach((c, j) => {
+    if (c.kind !== 'calc') return;
+    if (c.fn === 'diff') valid.forEach((i, p) => { const a = valid[Math.max(0, p - 1)], b = valid[Math.min(valid.length - 1, p + 1)]; const dx = val(b, 0) - val(a, 0); rc[i][j] = dx ? (val(b, c.of) - val(a, c.of)) / dx : null; });
+    if (c.fn === 'sq') valid.forEach(i => rc[i][j] = val(i, c.of) ** 2);
+    if (c.fn === 'share') { const tot = valid.reduce((s, i) => s + val(i, c.of), 0); valid.forEach(i => rc[i][j] = tot ? val(i, c.of) / tot : null); }
+    if (c.fn === 'ratio' || c.fn === 'dev') valid.forEach(i => { const b = val(i, c.of2); if (b) { const r = val(i, c.of) / b; rc[i][j] = c.fn === 'ratio' ? r : (r / PHI - 1) * 100; } });
+  });
+  const get = (i, j) => C[j].kind === 'calc' ? rc[i][j] : val(i, j);
+  const labels = valid.map(i => numericX ? val(i, 0) : String(rows[i][0]).trim());
+  const series = cfg.plot.map(j => ({ j, name: C[j].s, ys: valid.map(i => get(i, j)) }));
+  return { valid, rc, labels, series, numericX, count: valid.length };
+}
+function niceTicks(min, max, n = 5) {
+  if (!(max > min)) { max = min + 1; }
+  const st0 = (max - min) / n, mag = 10 ** Math.floor(Math.log10(st0)), r = st0 / mag, st = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+  const a = Math.floor(min / st + 1e-9) * st, b = Math.ceil(max / st - 1e-9) * st, out = [];
+  for (let v = a; v <= b + st / 2; v += st) out.push(+v.toFixed(10));
+  return out;
+}
+function chartSVG(cfg, m) {
+  const W = 600, H = 320, ml = 56, mr = 16, mt = 18, mb = 54, pw = W - ml - mr, ph = H - mt - mb;
+  const all = m.series.flatMap(s => s.ys.filter(v => v != null));
+  let y0 = Math.min(...all), y1 = Math.max(...all); if (cfg.type === 'bar') { y0 = Math.min(0, y0); if (cfg.ref) y1 = Math.max(y1, cfg.ref.v); }
+  const yt = niceTicks(y0, y1), ymin = yt[0], ymax = yt[yt.length - 1];
+  const Y = v => mt + ph - (v - ymin) / (ymax - ymin) * ph;
+  const cols = ['var(--accent)', 'var(--c2)'];
+  const ax = cfg.cols[0], ay = cfg.cols[cfg.plot[0]];
+  let g = `<rect x="0" y="0" width="${W}" height="${H}" fill="var(--surface)"/>`;
+  yt.forEach(v => g += `<line x1="${ml}" x2="${W - mr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${ml - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${nf(v)}</text>`);
+  let body = '';
+  if (cfg.type === 'bar') {
+    const n = m.labels.length, bw = pw / n, bar = Math.min(56, bw * 0.6);
+    m.series.slice(0, 1).forEach(s => s.ys.forEach((v, i) => { const x = ml + bw * i + (bw - bar) / 2; body += `<rect x="${x}" y="${Math.min(Y(v), Y(0))}" width="${bar}" height="${Math.abs(Y(v) - Y(0))}" fill="var(--accent)" rx="3"/><text x="${x + bar / 2}" y="${Math.min(Y(v), Y(0)) - 4}" text-anchor="middle" font-size="11" fill="var(--fg,var(--ink))" style="fill:var(--ink)">${nf(v)}</text>`; }));
+    m.labels.forEach((l, i) => { const x = ml + bw * i + bw / 2; const t = String(l); body += `<text x="${x}" y="${H - mb + 16}" text-anchor="middle" font-size="11" fill="var(--muted)">${esc(t.length > 12 ? t.slice(0, 11) + '…' : t)}</text>`; });
+    if (cfg.ref) body += `<line x1="${ml}" x2="${W - mr}" y1="${Y(cfg.ref.v)}" y2="${Y(cfg.ref.v)}" stroke="var(--c2)" stroke-dasharray="6 4" stroke-width="2"/><text x="${W - mr}" y="${Y(cfg.ref.v) - 5}" text-anchor="end" font-size="12" fill="var(--c2)">${cfg.ref.t}</text>`;
+  } else {
+    const xs = m.labels, xt = niceTicks(Math.min(...xs), Math.max(...xs)), xmin = xt[0], xmax = xt[xt.length - 1];
+    const X = v => ml + (v - xmin) / (xmax - xmin) * pw;
+    xt.forEach(v => g += `<line y1="${mt}" y2="${mt + ph}" x1="${X(v)}" x2="${X(v)}" stroke="var(--line)" stroke-dasharray="2 4"/><text x="${X(v)}" y="${mt + ph + 16}" text-anchor="middle" font-size="11" fill="var(--muted)">${nf(v)}</text>`);
+    if (ymin < 0 && ymax > 0) g += `<line x1="${ml}" x2="${W - mr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)"/>`;
+    m.series.forEach((s, k) => {
+      const pts = s.ys.map((v, i) => v == null ? null : [X(xs[i]), Y(v)]).filter(Boolean);
+      body += `<polyline fill="none" stroke="${cols[k % 2]}" stroke-width="2.5" stroke-linejoin="round" points="${pts.map(p => p.join(',')).join(' ')}"/>`;
+      pts.forEach(p => body += `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${cols[k % 2]}"/>`);
+    });
+    if ((cfg.an || []).includes('extrema')) { const ys = m.series[0].ys; let hi = 0, lo = 0; ys.forEach((v, i) => { if (v > ys[hi]) hi = i; if (v < ys[lo]) lo = i; });
+      [[hi, 'max'], [lo, 'min']].forEach(([i]) => body += `<circle cx="${X(xs[i])}" cy="${Y(ys[i])}" r="8" fill="none" stroke="var(--bad-fg)" stroke-width="2"/>`); }
+    if (m.series.length > 1) m.series.forEach((s, k) => body += `<g><rect x="${ml + 8 + k * 120}" y="${mt + 2}" width="12" height="12" rx="2" fill="${cols[k % 2]}"/><text x="${ml + 26 + k * 120}" y="${mt + 12}" font-size="12" fill="var(--ink)">${esc(s.name)}</text></g>`);
+  }
+  g += `<line x1="${ml}" x2="${ml}" y1="${mt}" y2="${mt + ph}" stroke="var(--muted)"/><line x1="${ml}" x2="${W - mr}" y1="${mt + ph}" y2="${mt + ph}" stroke="var(--muted)"/>`;
+  g += `<text x="${ml + pw / 2}" y="${H - 8}" text-anchor="middle" font-size="12" fill="var(--muted)">${esc(cl(ax))}</text><text transform="translate(14 ${mt + ph / 2}) rotate(-90)" text-anchor="middle" font-size="12" fill="var(--muted)">${esc(cl(ay))}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(T().chartT)}" font-family="var(--sans)">${g}${body}</svg>`;
+}
+function analysis(cfg, m) {
+  const t = T(), out = [], xs = m.labels, ys = m.series[0].ys, s = cfg.cols[cfg.plot[0]].s, sx = cfg.cols[0].s;
+  (cfg.an || []).forEach(a => {
+    if (a === 'extrema' && m.count >= 3) {
+      let found = false;
+      for (let i = 1; i < ys.length - 1; i++) {
+        if (ys[i] > ys[i - 1] && ys[i] > ys[i + 1]) { out.push(t.anMax(s, nf(ys[i]), sx, nf(xs[i]))); found = true; }
+        if (ys[i] < ys[i - 1] && ys[i] < ys[i + 1]) { out.push(t.anMin(s, nf(ys[i]), sx, nf(xs[i]))); found = true; }
+      }
+      if (!found) out.push(t.anNoExt);
+    }
+    if (a === 'monotone' && m.count >= 2) {
+      const runs = []; for (let i = 1; i < ys.length; i++) { const d = Math.sign(ys[i] - ys[i - 1]); if (!d) continue; const last = runs[runs.length - 1]; if (last && last.d === d) last.b = xs[i]; else runs.push({ d, a: xs[i - 1], b: xs[i] }); }
+      runs.forEach(r => out.push((r.d > 0 ? t.anInc : t.anDec)(nf(r.a), nf(r.b))));
+    }
+    if (a === 'zeros' && m.count >= 2) {
+      const z = []; for (let i = 0; i < ys.length; i++) { if (ys[i] === 0) z.push(xs[i]); else if (i && ys[i - 1] * ys[i] < 0) z.push(xs[i - 1] + (0 - ys[i - 1]) * (xs[i] - xs[i - 1]) / (ys[i] - ys[i - 1])); }
+      if (z.length) z.forEach(v => out.push(t.anZero(sx, nf(v)))); else out.push(t.anNoZero);
+    }
+    if (a === 'expfit' && m.count >= 3) {
+      const pts = xs.map((x, i) => [x, ys[i]]).filter(p => p[1] > 0);
+      if (pts.length >= 3) { const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + Math.log(p[1]), 0) / n;
+        const sxx = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0), sxy = pts.reduce((a, p) => a + (p[0] - mx) * (Math.log(p[1]) - my), 0), b = sxy / sxx, a0 = my - b * mx;
+        const ssT = pts.reduce((a, p) => a + (Math.log(p[1]) - my) ** 2, 0), ssR = pts.reduce((a, p) => a + (Math.log(p[1]) - (a0 + b * p[0])) ** 2, 0), r2 = ssT ? 1 - ssR / ssT : 1;
+        const k = -b; out.push(k > 0 ? t.anFit(nf(k), nf(Math.exp(a0)), nf(Math.LN2 / k), nf(r2)) : t.anFitBad); } else out.push(t.anFitBad);
+    }
+    if (a === 'integral' && m.count >= 2) {
+      let i1 = 0, i2 = 0; for (let i = 1; i < xs.length; i++) { const dx = xs[i] - xs[i - 1]; i1 += dx * (ys[i] + ys[i - 1]) / 2; i2 += dx * (ys[i] ** 2 + ys[i - 1] ** 2) / 2; }
+      out.push(t.anInt(nf(i1)), t.anInt2(nf(i2)));
+    }
+    if (a === 'hist' && m.count >= 1) { const tot = ys.reduce((a, b) => a + b, 0); let mi = 0; ys.forEach((v, i) => { if (v > ys[mi]) mi = i; }); out.push(t.anTotal(nf(tot)), t.anMode(m.labels[mi], nf(ys[mi]))); }
+    if (a === 'bars' && m.count >= 1) { let hi = 0, lo = 0; ys.forEach((v, i) => { if (v > ys[hi]) hi = i; if (v < ys[lo]) lo = i; }); out.push(t.anBarMax(m.labels[hi], nf(ys[hi])), t.anBarMin(m.labels[lo], nf(ys[lo]))); }
+    if (a === 'phi' && m.count >= 1) { const near = ys.filter(v => Math.abs(v / PHI - 1) <= 0.05).length; out.push(t.anPhi(nf(ys.reduce((a, b) => a + b, 0) / ys.length), near, ys.length)); }
+    if (a === 'maxdiff' && m.series.length >= 2 && m.count >= 1) { let bi = 0, bd = -1; xs.forEach((x, i) => { const d = Math.abs(m.series[1].ys[i] - m.series[0].ys[i]); if (d > bd) { bd = d; bi = i; } }); out.push(t.anDiff(nf(bd), nf(xs[bi]))); }
+  });
+  return out;
+}
+function vizInner(n, rows) {
+  const cfg = TB[n], m = model(cfg, rows), t = T();
+  if (m.count < cfg.min) return `<p class="muted" style="padding:12px">${t.noData(cfg.min)}</p>`;
+  const an = analysis(cfg, m);
+  return `<div class="chartbox">${chartSVG(cfg, m)}</div>${an.length ? `<h4 style="margin-top:10px">${t.anT}</h4><ul class="an">${an.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`;
+}
+function tableBox(t, w, locked) {
+  const n = t.n, cfg = TB[n], m = T(), rows = tblRows(w, n), mm = model(cfg, rows);
+  const head = cfg.cols.map(c => `<th>${esc(cl(c))}</th>`).join('') + '<th></th>';
+  const body = rows.map((r, i) => `<tr>${cfg.cols.map((c, j) => c.kind === 'calc' ? `<td class="calc" id="calc-${i}-${j}">${mm.rc[i][j] == null ? '' : nf(mm.rc[i][j])}</td>` : `<td><input id="tb-${i}-${j}" class="${c.kind === 'text' ? 'txt' : ''}" data-act="cell" data-r="${i}" data-c="${j}" value="${esc(r[j])}" inputmode="${c.kind === 'text' ? 'text' : 'decimal'}" ${locked ? 'disabled' : ''} aria-label="${esc(cl(c))}, ${i + 1}"></td>`).join('')}<td class="x">${locked ? '' : `<button data-act="row-del" data-v="${i}" aria-label="${m.del}" title="${m.del}">×</button>`}</td></tr>`).join('');
+  return `<div class="stack"><div class="tbhead"><h4 style="margin:0">${m.tblT}</h4>${locked ? '' : `<div class="acts"><button class="btn ghost sm" data-act="row-add">${m.addRow}</button><button class="btn ghost sm" data-act="tb-sample">${m.sample}</button><button class="btn ghost sm" data-act="tb-clear">${m.clear}</button></div>`}</div>
+    <div class="dt"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    <p class="muted">${m.sampleNote}</p>
+    <div><h4>${m.chartT}</h4><div id="viz">${vizInner(n, rows)}</div></div></div>`;
+}
+const viewBox = t => { const w = (S.work[S.uid]?.tasks || {})[t.n] || {}; return `<div class="stack"><h4 style="margin:0">${T().chartT}</h4><div>${vizInner(t.n, tblRows(w, t.n))}</div></div>`; };
+function refreshViz() {
+  const n = S.task, w = myTask(n), rows = tblRows(w, n), cfg = TB[n]; if (!cfg) return;
+  const v = document.getElementById('viz'); if (v) v.innerHTML = vizInner(n, rows);
+  const mm = model(cfg, rows);
+  rows.forEach((r, i) => cfg.cols.forEach((c, j) => { if (c.kind === 'calc') { const e = document.getElementById(`calc-${i}-${j}`); if (e) e.textContent = mm.rc[i][j] == null ? '' : nf(mm.rc[i][j]); } }));
+}
+function teacherViz(t, w) {
+  const cfg = TB[t.n]; if (!cfg || !w.tables?.[t.n]) return '';
+  const rows = w.tables[t.n].rows, mm = model(cfg, rows);
+  const head = cfg.cols.map(c => `<th>${esc(cl(c))}</th>`).join('');
+  const body = rows.filter(r => r.some(x => String(x).trim() !== '')).map(r => { const i = rows.indexOf(r); return `<tr>${cfg.cols.map((c, j) => `<td>${c.kind === 'calc' ? (mm.rc[i][j] == null ? '' : nf(mm.rc[i][j])) : esc(r[j])}</td>`).join('')}</tr>`; }).join('');
+  return `<details open><summary>${T().tblT}</summary><div class="stack"><div class="dt"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${vizInner(t.n, rows)}</div></details>`;
+}
+
+/* ---------- wizard model ---------- */
+const nSteps = t => tt(t).plan.length + 4;               // intro, form, plan steps…, summary, submit
+function subOk(t,w,i){ const h=t.hints?.[L]?.[i]; if(!h) return true; return h.how.every((_,j)=>w.sub?.[i]?.[j]); }
+function tableOk(t,w,i){ const cfg=TB[t.n]; if(!cfg||cfg.step!==i) return true; return model(cfg,tblRows(w,t.n)).count>=cfg.min; }
+function stepOk(t,w,k){
+  const P=tt(t).plan.length;
+  if(k===0) return true;
+  if(k===1) return (w.forms||[]).some(Boolean);
+  if(k>=2 && k<=P+1){ const i=k-2; return len((w.steps||[])[i])>=MIN_LEN && subOk(t,w,i) && tableOk(t,w,i); }
+  if(k===P+2) return len(w.notes)>=MIN_LEN;
+  return true;
+}
+const allStepsOk = (t,w) => { for(let k=0;k<nSteps(t)-1;k++) if(!stepOk(t,w,k)) return false; return true; };
+function goStep(k){ const w=myTask(S.task); S.step=k; w.step=k; if(k>(w.reached||0)) w.reached=k; scheduleSave(); render(); window.scrollTo(0,0); }
+
+/* ---------- render ---------- */
+function render(){
+  const act=document.activeElement, keep=act&&act.id?{id:act.id,s:act.selectionStart,e:act.selectionEnd}:null;
+  $('#app').innerHTML=shell();
+  document.title='СРС-навигатор';
+  document.documentElement.lang=L;
+  if(keep){const el=document.getElementById(keep.id); if(el){el.focus(); try{el.setSelectionRange(keep.s,keep.e)}catch(_){}}}
+}
+function shell(){
+  const m=T(), teacher=S.mode==='teacher';
+  const tabs=teacher?[['plan',m.tPlanT],['review',m.tReview+(queue().length?`<span class="badge">${queue().length}</span>`:'')],['journal',m.tJournal],['rules',m.tRules]]:[['plan',m.tPlanS],['rules',m.tRules]];
+  let body;
+  if(teacher) body=S.tab==='plan'?tPlan():S.tab==='review'?tReview():S.tab==='journal'?tJournal():rules();
+  else body=S.tab==='rules'?rules():(S.task?taskPage(S.task):sPlan());
+  return `<div class="top"><div class="top-in">
+    <div class="brand"><b>СРС-навигатор</b><span>${m.sub(TASKS.length,TASKS.reduce((a,t)=>a+t.hours,0))}</span></div>
+    <div class="seg" role="group" aria-label="${m.lang}"><button data-act="lang" data-v="kk" aria-pressed="${L==='kk'}">ҚАЗ</button><button data-act="lang" data-v="ru" aria-pressed="${L==='ru'}">РУС</button></div>
+    ${S.canEdit?`<div class="seg" role="group" aria-label="${m.role}"><button data-act="mode" data-v="student" aria-pressed="${!teacher}">${m.student}</button><button data-act="mode" data-v="teacher" aria-pressed="${teacher}">${m.teacher}</button></div>`:''}
+    <nav class="tabs">${tabs.map(([k,l])=>`<button data-act="tab" data-v="${k}" ${S.tab===k?'aria-current="page"':''}>${l}</button>`).join('')}</nav>
+  </div></div>
+  <div class="wrap">${S.sa?`<div class="demo">${m.saNote}</div>`:S.demo?`<div class="demo">${m.demo}</div>`:''}<main>${body}</main></div>${S.toast?`<div class="toast" role="status">${esc(toastText())}</div>`:''}`;
+}
+const chip = st => `<span class="chip s-${st}">${T().st[st]}</span>`;
+const linkList = arr => `<ul class="links">${arr.map(l=>`<li><a href="${esc(l.u)}" target="_blank" rel="noopener noreferrer">${esc(l.t)}</a></li>`).join('')}</ul>`;
+
+/* --- student: list --- */
+function sPlan(){
+  const m=T(), uid=S.uid, sm=summary(uid), d=myDoc();
+  const next=TASKS.filter(t=>['new','draft','returned'].includes(statusOf(uid,t.n))&&due(t.n)).sort((a,b)=>due(a.n)<due(b.n)?-1:1)[0];
+  const profile=!d.name?`<div class="panel stack"><h3>${m.intro}</h3><p class="muted">${m.introP}</p>
+    <div class="cols"><label class="f">${m.fio}<input id="f-name" autocomplete="name"></label><label class="f">${m.group}<input id="f-group" placeholder="${esc(m.groupPh)}"></label></div>
+    <div class="acts"><button class="btn" data-act="profile">${m.save}</button></div></div>`:'';
+  return `<div class="head"><div><h2>${esc(d.name||m.myPlan)}</h2><p>${m.myPlanP}</p></div>
+    <div class="stats"><div class="stat"><b>${sm.done}/${TASKS.length}</b><span>${m.graded}</span></div><div class="stat"><b>${sm.avg==null?'—':sm.avg.toFixed(0)}</b><span>${m.avg}</span></div><div class="stat"><b>${sm.gpa==null?'—':sm.gpa.toFixed(2)}</b><span>${m.gpa}</span></div></div></div>
+    <div class="bar" aria-hidden="true"><i style="width:${sm.sub/TASKS.length*100}%"></i></div>
+    ${profile}
+    ${next?`<div class="panel acts" style="justify-content:space-between"><div><h4>${m.next}</h4><b>${next.n}. ${esc(tt(next).title)}</b> <span class="muted">${m.until} ${fmtDate(due(next.n))}</span></div><button class="btn" data-act="open" data-v="${next.n}">${statusOf(uid,next.n)==='new'?m.open:m.cont}</button></div>`:''}
+    ${[[1,6],[7,12]].map(([a,b],gi)=>`<section><div class="group-t"><h3>${m.grp[gi]}</h3><span>${m.tasks} ${a}–${b}</span></div><div class="rows">${TASKS.filter(t=>t.n>=a&&t.n<=b).map(t=>row(t,uid)).join('')}</div></section>`).join('')}`;
+}
+function row(t,uid){
+  const st=statusOf(uid,t.n), g=gradeOf(uid,t.n), late=isLate(uid,t.n), m=T();
+  return `<button class="row" data-act="open" data-v="${t.n}"><span class="n">${t.n}</span><span class="t"><b>${esc(tt(t).title)}</b></span>
+    <span class="due ${late?'late':''}">${late?m.overdue+' · ':m.until+' '}${fmtDate(due(t.n))}</span>${chip(st)}<span class="sc">${st==='graded'?`${g.total} · ${letter(g.total)[1]}`:''}</span></button>`;
+}
+
+/* --- student: task wizard --- */
+function stepLabels(t){
+  const m=T(), P=tt(t).plan.length, a=[m.sIntro,m.sForm];
+  for(let i=0;i<P;i++) a.push(m.sStep(i+1));
+  a.push(m.sSum,m.sSubmit); return a;
+}
+function sidePanel(t){
+  const m=T(), c=tt(t), lk=t.links[L];
+  return `<div class="panel crit"><h4>${m.crit}</h4><p>${esc(c.crit)}</p></div>
+   <div class="panel"><h4>${m.extraLit}</h4>${linkList(lk)}<p class="muted" style="margin-top:8px">${m.extraNote}</p></div>
+   <div class="panel"><details><summary>${m.mainLit} (${c.lit.length})</summary><ol class="lit">${c.lit.map(l=>`<li>${esc(l)}</li>`).join('')}</ol></details></div>`;
+}
+const tipBox = (title,list,open) => `<details class="tips" ${open?'open':''}><summary>${esc(title)}</summary><ul class="plain" style="margin-top:8px">${list.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`;
+function hintBox(t,i,w,locked){
+  const h=t.hints?.[L]?.[i]; if(!h) return ''; const m=T();
+  return `<details class="tips" open><summary>${m.hintT}</summary><h5>${m.howT}</h5><div class="stack" style="gap:8px">${h.how.map((x,j)=>`<label class="sub"><input type="checkbox" data-act="sub" data-i="${i}" data-v="${j}" ${w.sub?.[i]?.[j]?'checked':''} ${locked?'disabled':''}><span>${esc(x)}</span></label>`).join('')}</div><div class="err"><b>${m.errT}</b>${esc(h.err)}</div></details>`;
+}
+function stepBody(t,w,k,locked){
+  const m=T(), c=tt(t), P=c.plan.length, n=t.n;
+  if(k===0) return `<div class="stephead"><h3>${m.introT}</h3><p class="muted">${m.introP}</p></div>
+    <div class="panel"><h4>${m.plan}</h4><ol class="lit">${c.plan.map(p=>`<li>${esc(p)}</li>`).join('')}</ol></div>
+    <div class="panel acts" style="gap:24px"><div><h4>${m.deadline}</h4><b>${fmtDate(due(n))}</b></div><div><h4>${m.hours}</h4><b>${t.hours} ${m.hrs}</b></div></div>
+    ${tipBox(m.introTipsT,m.introTips,true)}
+    <div class="panel"><h4>${m.rubShow} (${maxSum})</h4><div class="rub" style="grid-template-columns:minmax(0,1fr) auto">${RUB().map(r=>`<span>${r[1]}</span><b>${r[2]}</b>`).join('')}</div></div>`;
+  if(k===1) return `<div class="stephead"><h3>${m.formT}</h3><p class="muted">${m.formP}</p></div>
+    <div class="stack">${c.forms.map((f,i)=>`<label class="opt"><input type="checkbox" data-act="form" data-v="${i}" ${w.forms?.[i]?'checked':''} ${locked?'disabled':''}><span><b>${esc(f.h)}</b><ul>${f.i.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></span></label>`).join('')}</div>
+    ${tipBox(m.formTipsT,m.formTips,true)}`;
+  if(k>=2&&k<=P+1){ const i=k-2, picks=c.forms.filter((_,j)=>w.forms?.[j]).map(f=>f.h).join(', ');
+    return `<div class="stephead"><span class="kick">${m.sStep(i+1)} · ${i+1}/${P}</span><h3>${esc(c.plan[i])}</h3></div>
+    ${picks?`<p class="muted">${m.chosen}: ${esc(picks)}</p>`:''}
+    ${hintBox(t,i,w,locked)}
+    ${TB[n]&&TB[n].step===i?tableBox(t,w,locked):(TB[n]&&(TB[n].views||[]).includes(i)?viewBox(t):'')}
+    <label class="f">${m.stepT}<textarea id="f-step" ${locked?'disabled':''} placeholder="${esc(m.stepPh)}">${esc((w.steps||[])[i])}</textarea></label>
+    <p class="muted">${m.stepHint}</p>`; }
+  if(k===P+2) return `<div class="stephead"><h3>${m.sumT}</h3><p class="muted">${m.sumP}</p></div>
+    <label class="f">${m.concl}<textarea id="f-notes" ${locked?'disabled':''}>${esc(w.notes)}</textarea></label>
+    <label class="f">${m.link}<input id="f-link" type="url" value="${esc(w.link)}" placeholder="https://" ${locked?'disabled':''}></label>
+    ${tipBox(m.sumTipsT,m.sumTips,true)}
+    ${imgPanel(t,w,locked)}`;
+  const labs=stepLabels(t), okAll=allStepsOk(t,w), selfOk=m.self.every((_,i)=>w.self?.[i]), st=statusOf(S.uid,n);
+  return `<div class="stephead"><h3>${m.checkT}</h3><p class="muted">${m.checkP}</p></div>
+    <ul class="recap">${labs.slice(1,P+3).map((l,i)=>`<li><span class="${stepOk(t,w,i+1)?'ok':'no'}">${stepOk(t,w,i+1)?'✓':'○'}</span><span>${esc(l)}</span></li>`).join('')}</ul>
+    ${tipBox(m.subTipsT,m.subTips,false)}
+    <div class="checks">${m.self.map((s,i)=>`<label><input type="checkbox" data-act="self" data-v="${i}" ${w.self?.[i]?'checked':''} ${locked?'disabled':''}><span>${s}</span></label>`).join('')}</div>
+    <div class="acts">${st==='graded'?'':st==='submitted'?`<button class="btn ghost" data-act="withdraw">${m.withdraw}</button>`:`<button class="btn" data-act="submit" ${okAll&&selfOk?'':'disabled'}>${st==='returned'?m.resubmit:m.submit}</button>`}</div>
+    ${!locked&&!(okAll&&selfOk)?`<p class="muted">${m.selfNeed}</p>`:''}
+    ${st==='submitted'?`<p class="muted">${m.submittedOn(fmtTs(w.submittedAt))}</p>`:''}
+    ${reportPanel(t,w,locked)}`;
+}
+function resetBox(n){
+  const m=T();
+  return S.resetAsk===n
+   ? `<div class="panel stack" role="alertdialog" aria-label="${esc(m.rstBtn)}"><p>${m.rstAsk}</p><div class="acts"><button class="btn bad" data-act="reset-yes">${m.rstYes}</button><button class="btn ghost" data-act="reset-no">${m.rstNo}</button></div></div>`
+   : `<div class="acts"><button class="btn ghost sm" data-act="reset-ask">↺ ${m.rstBtn}</button></div>`;
+}
+function taskPage(n){
+  const m=T(), t=taskOf(n), c=tt(t), uid=S.uid, w=myTask(n), st=statusOf(uid,n), g=gradeOf(uid,n);
+  const locked=st==='submitted'||st==='graded', total=nSteps(t), k=Math.max(0,Math.min(S.step,total-1)), reached=w.reached||0;
+  const labs=stepLabels(t);
+  const stepper=`<div class="stepper" role="list">${labs.map((l,i)=>{const cls=i===k?'cur':(stepOk(t,w,i)&&i<=reached&&i!==total-1&&i<k?'done':(stepOk(t,w,i)&&i<reached&&i>0?'done':''));
+    const can=locked||i<=Math.max(reached,k);
+    return `<button class="${cls}" data-act="go" data-v="${i}" ${can?'':'disabled'} ${i===k?'aria-current="step"':''}><span class="dot">${cls==='done'?'✓':i+1}</span><span>${esc(l)}</span></button>`}).join('')}</div>`;
+  const ok=stepOk(t,w,k);
+  const cfgT=TB[n]; let need=k===1?m.formNeed:m.stepNeed;
+  if(k>=2&&k<=total-3){ const i=k-2; if(!subOk(t,w,i)) need=m.subNeed; else if(!tableOk(t,w,i)) need=m.tblNeed(cfgT.min); }
+  const nav=`<div class="nav"><button class="btn ghost" data-act="go" data-v="${k-1}" ${k===0?'disabled':''}>← ${m.back}</button>
+    <span class="muted" id="saving">${esc(savingText())}</span>
+    ${k<total-1?`<button class="btn" data-act="go" data-v="${k+1}" ${(ok||locked)?'':'disabled'}>${k===total-2?m.toSubmit:m.nextBtn} →</button>`:'<span></span>'}</div>
+    ${k<total-1&&!ok&&!locked?`<p class="muted">${need}</p>`:''}`;
+  const res=g&&(st==='graded'||st==='returned')?`<div class="panel res"><h4>${st==='graded'?m.result:m.returnedT}</h4>
+    ${st==='graded'?`<div class="big"><b>${g.total}</b><span>${m.outOf} ${maxSum} · ${letter(g.total)[1]} · ${letter(g.total)[2].toFixed(2)}</span></div>`:''}
+    ${g.comment?`<p>${esc(g.comment)}</p>`:''}
+    ${st==='graded'?RUB().map(r=>`<div class="crow"><span>${r[1]}</span><span>${g.scores?.[r[0]]??0}/${r[2]}</span><div class="bar"><i style="width:${(g.scores?.[r[0]]??0)/r[2]*100}%"></i></div></div>`).join(''):''}</div>`:'';
+  return `<button class="back" data-act="close">${m.allTasks}</button>
+  <div class="head"><div><span class="muted">${m.task} ${n} · ${t.hours} ${m.hrs} · ${m.until} ${fmtDate(due(n))}</span><h2>${esc(c.title)}</h2></div>${chip(st)}</div>
+  ${res}
+  <div class="panel stack">${stepper}<div class="muted">${m.stepOf(k+1,total)}</div></div>
+  <div class="cols"><div class="panel stack">${stepBody(t,w,k,locked)}${nav}</div><div class="stack">${sidePanel(t)}${locked?'':resetBox(n)}</div></div>`;
+}
+
+
+/* ---------- Word report ---------- */
+const DOCX_URL='https://cdn.jsdelivr.net/npm/docx@9.0.3/build/index.umd.js';
+let docxP=null;
+function loadDocx(){ if(window.docx) return Promise.resolve(window.docx); if(docxP) return docxP;
+  docxP=new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=DOCX_URL; sc.onload=()=>window.docx?res(window.docx):rej(new Error('docx')); sc.onerror=()=>{docxP=null;rej(new Error('load docx'))}; document.head.appendChild(sc); }); return docxP; }
+const RPAL={'var(--fg,var(--ink))':'#15212c','var(--accent)':'#0d6b6f','var(--c2)':'#b45309','var(--surface)':'#ffffff','var(--line)':'#d7dee5','var(--muted)':'#58697a','var(--ink)':'#15212c','var(--bad-fg)':'#a8322b','var(--sans)':'Arial, sans-serif'};
+function svgLit(svg){ let o=svg.replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" width="600" height="320" '); Object.keys(RPAL).forEach(k=>{o=o.split(k).join(RPAL[k])}); return o; }
+function svgToPng(svg){ return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=1200; c.height=640; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,1200,640); x.drawImage(img,0,0,1200,640); c.toBlob(b=>b?b.arrayBuffer().then(a=>res(new Uint8Array(a))):rej(new Error('png')),'image/png'); }; img.onerror=()=>rej(new Error('svg')); img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgLit(svg)); }); }
+const dataBytes = d => { const b=atob(d.split(',')[1]), u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; };
+const RP={
+ru:{unit:'Учебное заведение',kind:'САМОСТОЯТЕЛЬНАЯ РАБОТА СТУДЕНТА',disc:'Дисциплина: Математика',task:'Задание',by:'Выполнил(а): студент(ка)',grp:'группа',chk:'Проверил(а): преподаватель',toc:'Содержание',intro:'Введение',goal:'Цель работы и критерии оценки',forms:'Выбранная форма отчёта',main:'Основная часть',tbl:'Таблица',fig:'Рисунок',an:'Анализ результатов',ill:'Иллюстрации к работе',concl:'Заключение',res:'Электронный ресурс',lit:'Список использованной литературы',page:'Стр.'},
+kk:{unit:'Оқу орны',kind:'СТУДЕНТТІҢ ӨЗІНДІК ЖҰМЫСЫ',disc:'Пән: Математика',task:'Тапсырма',by:'Орындаған: студент, топ',grp:'топ',chk:'Тексерген: оқытушы',toc:'Мазмұны',intro:'Кіріспе',goal:'Жұмыстың мақсаты және бағалау критерийлері',forms:'Таңдалған есеп беру нысаны',main:'Негізгі бөлім',tbl:'Кесте',fig:'Сурет',an:'Нәтижелерді талдау',ill:'Жұмысқа арналған иллюстрациялар',concl:'Қорытынды',res:'Электрондық ресурс',lit:'Пайдаланылған әдебиеттер тізімі',page:'Бет'}};
+const refItems = t => { const c=tt(t); return [...c.lit.map(x=>({k:'l',x})), ...((t.links||{})[L]||[]).map(l=>({k:'w',x:l.t+' — '+l.u}))]; };
+const refOn = (w,i,k) => { const v=(w.refs||{})[i]; return v==null ? k==='l' : !!v; };
+async function buildReport(uid,n){
+  const D=await loadDocx(), t=taskOf(n), c=tt(t), r=RP[L], doc=S.work[uid]||{}, w=(doc.tasks||{})[n]||{};
+  const {Document,Packer,Paragraph,TextRun,HeadingLevel,AlignmentType,Table,TableRow,TableCell,WidthType,ImageRun,TableOfContents,Footer,PageNumber,PageBreak,BorderStyle,ShadingType,VerticalAlign}=D;
+  const FONT='Times New Roman', SZ=28;
+  const run=(x,o={})=>new TextRun({text:String(x??''),font:FONT,size:SZ,...o});
+  const P=(x,o={})=>new Paragraph({children:[run(x,o.run)],alignment:o.al??AlignmentType.JUSTIFIED,spacing:{line:360,after:o.after??0},indent:o.noIndent?undefined:{firstLine:709},...(o.p||{})});
+  const paras=(txt,o)=>String(txt||'').split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>P(s,o));
+  const H1=x=>new Paragraph({heading:HeadingLevel.HEADING_1,children:[run(x,{bold:true})],alignment:AlignmentType.CENTER,spacing:{before:240,after:240,line:360},pageBreakBefore:false});
+  const H2=x=>new Paragraph({heading:HeadingLevel.HEADING_2,children:[run(x,{bold:true})],spacing:{before:200,after:120,line:360},keepNext:true});
+  const cap=(x)=>new Paragraph({children:[run(x,{size:24})],alignment:AlignmentType.CENTER,spacing:{before:60,after:240,line:300}});
+  const ctr=(x,o={})=>new Paragraph({children:[run(x,o)],alignment:AlignmentType.CENTER,spacing:{after:o.after??120,line:360}});
+  const year=new Date().getFullYear();
+  const title=[ctr((doc.college||'').trim()||r.unit,{after:1800}),ctr(r.kind,{bold:true,after:600}),ctr(r.disc,{after:300}),ctr(`${r.task} № ${n}`,{bold:true,after:120}),ctr('«'+c.title+'»',{bold:true,after:2000}),
+    new Paragraph({children:[run(r.by+(doc.group?` (${r.grp} ${doc.group})`:''))],alignment:AlignmentType.RIGHT,spacing:{after:0,line:360}}),
+    new Paragraph({children:[run(doc.name||'—',{bold:true})],alignment:AlignmentType.RIGHT,spacing:{after:240,line:360}}),
+    new Paragraph({children:[run(r.chk)],alignment:AlignmentType.RIGHT,spacing:{after:0,line:360}}),
+    new Paragraph({children:[run((doc.teacher||'').trim()||'______________',{bold:true})],alignment:AlignmentType.RIGHT,spacing:{after:1600,line:360}}),
+    ctr(String(year),{after:0}), new Paragraph({children:[new PageBreak()]})];
+  const body=[];
+  body.push(H1(r.intro));
+  body.push(H2(r.goal)); body.push(...paras(c.crit));
+  const picks=c.forms.filter((_,j)=>w.forms?.[j]);
+  if(picks.length){ body.push(H2(r.forms)); picks.forEach(f=>body.push(P('— '+f.h,{noIndent:true}))); }
+  body.push(H1(r.main));
+  let tblNo=0, figNo=0;
+  const cfg=TB[n];
+  for(let i=0;i<c.plan.length;i++){
+    body.push(H2(`${i+1}. ${c.plan[i]}`));
+    body.push(...paras((w.steps||[])[i]));
+    if(cfg&&cfg.step===i){
+      const rows=tblRows(w,n), mm=model(cfg,rows);
+      const used=rows.map((_,k)=>k).filter(k=>mm.valid.includes(k));
+      if(used.length){
+        tblNo++; body.push(new Paragraph({children:[run(`${r.tbl} ${tblNo}`,{size:24})],alignment:AlignmentType.LEFT,spacing:{before:120,after:60},keepNext:true}));
+        const bd={style:BorderStyle.SINGLE,size:4,color:'000000'}, borders={top:bd,bottom:bd,left:bd,right:bd};
+        const cell=(x,b)=>new TableCell({borders,verticalAlign:VerticalAlign.CENTER,margins:{top:40,bottom:40,left:80,right:80},shading:b?{type:ShadingType.CLEAR,fill:'E7ECEF',color:'auto'}:undefined,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[run(x,{size:24,bold:!!b})]})]});
+        const trs=[new TableRow({tableHeader:true,children:cfg.cols.map(cc=>cell(cl(cc),true))})];
+        used.forEach(k=>trs.push(new TableRow({cantSplit:true,children:cfg.cols.map((cc,j)=>cell(cc.kind==='calc'?(mm.rc[k][j]==null?'':nf(mm.rc[k][j])):String(rows[k][j]).trim()))})));
+        body.push(new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:trs}));
+        body.push(new Paragraph({spacing:{after:200},children:[]}));
+      }
+      if(mm.count>=cfg.min){
+        figNo++; const png=await svgToPng(chartSVG(cfg,mm));
+        body.push(new Paragraph({alignment:AlignmentType.CENTER,keepNext:true,spacing:{before:120},children:[new ImageRun({type:'png',data:png,transformation:{width:560,height:299},altText:{title:T().chartT,description:T().chartT,name:'chart'+figNo}})]}));
+        body.push(cap(`${r.fig} ${figNo} — ${T().chartT}`));
+        const an=analysis(cfg,mm);
+        if(an.length){ body.push(P(r.an+':',{noIndent:true,run:{bold:true}})); an.forEach(x=>body.push(P('— '+x,{noIndent:true}))); }
+      }
+    }
+  }
+  const imgs=(w.imgs||[]);
+  if(imgs.length){ body.push(H2(r.ill)); for(const im of imgs){ figNo++; const mw=560, sc=Math.min(1,mw/im.w, 420/im.h);
+    body.push(new Paragraph({alignment:AlignmentType.CENTER,keepNext:true,spacing:{before:120},children:[new ImageRun({type:'jpg',data:dataBytes(im.d),transformation:{width:Math.round(im.w*sc),height:Math.round(im.h*sc)},altText:{title:im.c||r.fig,description:im.c||r.fig,name:'img'+figNo}})]}));
+    body.push(cap(`${r.fig} ${figNo}${im.c?' — '+im.c:''}`)); } }
+  body.push(H1(r.concl)); body.push(...paras(w.notes));
+  if(w.link) body.push(P(`${r.res}: ${w.link}`,{noIndent:true}));
+  body.push(H1(r.lit));
+  const refs=refItems(t).filter((it,i)=>refOn(w,i,it.k)).map(it=>it.x);
+  refs.forEach((x,i)=>body.push(new Paragraph({children:[run((i+1)+'. '+x)],alignment:AlignmentType.JUSTIFIED,spacing:{line:360,after:60},indent:{left:709,hanging:709}, ...{}})));
+  // numbered prefix (plain text keeps numbering stable in every viewer)
+  const nb=body.length; 
+  const toc=[new Paragraph({children:[run(r.toc,{bold:true})],alignment:AlignmentType.CENTER,spacing:{after:240}}), new TableOfContents(r.toc,{hyperlink:true,headingStyleRange:'1-2'}), new Paragraph({children:[new PageBreak()]})];
+  const footer=new Footer({children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({children:[PageNumber.CURRENT],font:FONT,size:24})]})]});
+  const page={margin:{top:1134,bottom:1134,left:1701,right:850}};
+  const file=new Document({creator:doc.name||'',title:c.title,features:{updateFields:true},
+    styles:{default:{document:{run:{font:FONT,size:SZ}}},paragraphStyles:[
+      {id:'Heading1',name:'Heading 1',basedOn:'Normal',next:'Normal',quickFormat:true,run:{font:FONT,size:SZ,bold:true,color:'000000'},paragraph:{spacing:{before:240,after:240},outlineLevel:0}},
+      {id:'Heading2',name:'Heading 2',basedOn:'Normal',next:'Normal',quickFormat:true,run:{font:FONT,size:SZ,bold:true,color:'000000'},paragraph:{spacing:{before:200,after:120},outlineLevel:1}}]},
+    sections:[{properties:{page:{...page}},children:title},{properties:{page:{...page,pageNumbers:{start:2}}},footers:{default:footer},children:[...toc,...body]}]});
+  return Packer.toBlob(file);
+}
+async function exportDocx(uid,n){
+  if(!dl){ flash(()=>T().docxNo); return; }
+  S.busy=true; flash(()=>T().docxBusy);
+  try{ const blob=await buildReport(uid,n); S.busy=false;
+    const nm=(S.work[uid]?.name||'student').replace(/[^\p{L}\p{N}]+/gu,'_').slice(0,30);
+    await dl.save({filename:`srs-${n}-${nm}.docx`,data:blob}); }
+  catch(e){ S.busy=false; if(e&&e.code==='declined') return; flash(()=>T().docxFail+(e.message||e.code||'')); }
+}
+function reportPanel(t,w,locked){
+  const m=T(), items=refItems(t), doc=myDoc();
+  const row=(it,i)=>`<label class="opt"><input type="checkbox" data-act="ref" data-v="${i}" ${refOn(w,i,it.k)?'checked':''}><span>${esc(it.x)}</span></label>`;
+  const lit=items.map((it,i)=>[it,i]).filter(([it])=>it.k==='l'), web=items.map((it,i)=>[it,i]).filter(([it])=>it.k==='w');
+  return `<div class="panel stack"><div><h4>${m.rpT}</h4><p class="muted">${m.rpP}</p></div>
+   <label class="f">${m.college}<input class="in" id="f-college" value="${esc(doc.college)}" placeholder="${esc(m.collegePh)}"></label>
+   <label class="f">${m.teacher}<input class="in" id="f-teacher" value="${esc(doc.teacher)}" placeholder="${esc(m.teacherPh)}"></label>
+   <div><h4>${m.refsT}</h4><p class="muted">${m.refsP}</p></div>
+   ${lit.length?`<div class="stack"><b>${m.refsLit}</b>${lit.map(([it,i])=>row(it,i)).join('')}</div>`:''}
+   ${web.length?`<div class="stack"><b>${m.refsWeb}</b>${web.map(([it,i])=>row(it,i)).join('')}</div>`:''}
+   <div class="acts"><button class="btn" data-act="docx">${m.docxBtn}</button></div><p class="muted">${m.docxTip}</p></div>`;
+}
+function imgPanel(t,w,locked){
+  const m=T(), im=w.imgs||[];
+  return `<div class="panel stack"><div><h4>${m.imgT}</h4><p class="muted">${m.imgP}</p></div>
+   ${im.map((x,i)=>`<div class="imgrow"><img src="${x.d}" alt="${esc(x.c||m.imgT)}"><div class="stack"><label class="f">${m.imgCap}<input class="in" data-act="img-cap" data-v="${i}" id="f-cap${i}" value="${esc(x.c)}" ${locked?'disabled':''}></label>${locked?'':`<button class="btn ghost sm" data-act="img-del" data-v="${i}">${m.imgDel}</button>`}</div></div>`).join('')}
+   ${locked||im.length>=3?'':`<label class="btn ghost" style="align-self:flex-start">${m.imgAdd}<input type="file" accept="image/*" data-act="img-file" hidden></label>`}</div>`;
+}
+function readImage(file){ return new Promise((res,rej)=>{ const u=URL.createObjectURL(file), img=new Image(); img.onload=()=>{ const k=Math.min(1,800/Math.max(img.naturalWidth,img.naturalHeight)), w=Math.max(1,Math.round(img.naturalWidth*k)), h=Math.max(1,Math.round(img.naturalHeight*k)); const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(img,0,0,w,h); URL.revokeObjectURL(u); res({d:c.toDataURL('image/jpeg',.68),w,h,c:''}); }; img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('img'))}; img.src=u; }); }
+const imgBytes = () => Object.values(myDoc().tasks||{}).reduce((a,tk)=>a+(tk.imgs||[]).reduce((b,x)=>b+x.d.length,0),0);
+
+/* --- teacher --- */
+function tPlan(){
+  const m=T(), uids=studentUids();
+  return `<div class="head"><div><h2>${m.tPlanH}</h2><p>${m.tPlanP}</p></div></div>
+  <div class="tbl"><table><thead><tr><th>${m.colTask}</th><th>${m.colHrs}</th><th>${m.colDue}</th><th>${m.colSub}</th><th>${m.colGr}</th></tr></thead><tbody>
+  ${TASKS.map(t=>{const sub=uids.filter(u=>['submitted','graded'].includes(statusOf(u,t.n))).length, gr=uids.filter(u=>statusOf(u,t.n)==='graded').length;
+   return `<tr><td>${t.n}. ${esc(tt(t).title)}</td><td>${t.hours}</td><td><input class="in" id="d-${t.n}" type="date" data-act="due" data-v="${t.n}" value="${esc(due(t.n))}" aria-label="${esc(m.dueFor(t.n))}"></td><td>${sub}/${uids.length}</td><td>${gr}</td></tr>`}).join('')}
+  </tbody></table></div>`;
+}
+function tReview(){
+  const m=T(), q=queue(), rv=S.review;
+  const list=q.length?`<div class="rows">${q.map(x=>{const t=taskOf(x.n);return `<button class="row" style="grid-template-columns:34px 1fr auto" data-act="grade" data-u="${esc(x.uid)}" data-v="${x.n}"><span class="n">${x.n}</span><span class="t"><b>${esc(nameOf(x.uid))}</b><small>${esc(tt(t).title)}</small></span><span class="due">${m.submittedShort} ${fmtTs(x.at)}</span></button>`}).join('')}</div>`:`<div class="panel empty">${m.queueEmpty}</div>`;
+  return `<div class="head"><div><h2>${m.revH}</h2><p>${m.revP}</p></div></div>
+  <div class="cols"><div class="stack">${list}</div>${rv?gradePanel(rv.uid,rv.n):`<div class="panel empty">${m.pick}</div>`}</div>`;
+}
+function gradePanel(uid,n){
+  const m=T(), t=taskOf(n), c=tt(t), w=S.work[uid]?.tasks?.[n]||{}, g=gradeOf(uid,n), sc=g?.scores||{};
+  const picks=c.forms.filter((_,j)=>w.forms?.[j]).map(f=>f.h).join(', ');
+  const steps=c.plan.map((p,i)=>`<div><b>${i+1}. ${esc(p)}</b><p class="pre">${esc((w.steps||[])[i])||'<span class="muted">—</span>'}</p>${TB[n]&&TB[n].step===i?teacherViz(t,w):''}</div>`).join('');
+  return `<div class="panel stack" id="gp"><div><h4>${esc(nameOf(uid))} · ${m.task} ${n}</h4><b>${esc(c.title)}</b></div>
+    <div class="crit"><p class="muted">${m.critShort}: ${esc(c.crit)}</p></div>
+    ${picks?`<div><h4>${m.formsPicked}</h4><p>${esc(picks)}</p></div>`:''}
+    <details open><summary>${m.stepsT}</summary><div class="stack">${steps}</div></details>
+    <div><h4>${m.conclT}</h4><p class="pre">${esc(w.notes)||`<span class="muted">${m.noText}</span>`}</p>${w.link?`<p><a href="${esc(w.link)}" target="_blank" rel="noopener noreferrer" style="overflow-wrap:anywhere">${esc(w.link)}</a></p>`:''}</div>
+    <div class="rub">${RUB().map(r=>`<label for="r-${r[0]}">${r[1]} <span class="muted">(0–${r[2]})</span></label><input class="in" id="r-${r[0]}" type="number" min="0" max="${r[2]}" step="1" inputmode="numeric" data-act="rub" value="${sc[r[0]]??''}">`).join('')}</div>
+    <div class="total"><span>${m.total}</span><span id="gtot"></span></div>
+    <label class="f">${m.comment}<textarea id="f-comment" style="min-height:80px">${esc(g?.comment)}</textarea></label>
+    <div class="acts"><button class="btn ghost" data-act="docx-t">${m.docxBtn}</button><button class="btn" data-act="save-grade">${m.setGrade}</button><button class="btn bad" data-act="return">${m.ret}</button></div></div>`;
+}
+function tJournal(){
+  const m=T(), uids=studentUids().sort((a,b)=>nameOf(a).localeCompare(nameOf(b),loc()));
+  if(!uids.length) return `<div class="head"><h2>${m.jH}</h2></div><div class="panel empty">${m.jNone}</div>`;
+  return `<div class="head"><div><h2>${m.jH}</h2><p>${m.jP}</p></div><button class="btn ghost" data-act="csv">${m.csv}</button></div>
+  <div class="tbl"><table><thead><tr><th>${m.student1}</th>${TASKS.map(t=>`<th title="${esc(tt(t).title)}">${t.n}</th>`).join('')}<th>${m.avgS}</th><th>GPA</th></tr></thead><tbody>
+  ${uids.map(u=>{const sm=summary(u);return `<tr><td>${esc(nameOf(u))}</td>${TASKS.map(t=>{const st=statusOf(u,t.n),g=gradeOf(u,t.n);return `<td><button class="cell s-${st}" data-act="grade" data-u="${esc(u)}" data-v="${t.n}" title="${m.st[st]}">${st==='graded'?g.total:st==='new'?'·':st==='submitted'?'✓':st==='returned'?'↺':'…'}</button></td>`}).join('')}<td><b>${sm.avg==null?'—':sm.avg.toFixed(0)}</b></td><td><b>${sm.gpa==null?'—':sm.gpa.toFixed(2)}</b></td></tr>`}).join('')}
+  </tbody></table></div><p class="muted">${m.jLegend}</p>`;
+}
+
+/* --- memo --- */
+function rules(){
+  const m=T(), ul=a=>`<ul class="plain">${a.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  return `<div class="head"><div><h2>${m.memoH}</h2><p>${m.memoP}</p></div></div>
+  <div class="cols"><div class="stack">
+   <div class="panel"><h4>${m.m1}</h4>${ul(m.m1l)}</div>
+   <div class="panel"><h4>${m.m2}</h4>${ul(m.m2l)}</div>
+   <div class="panel"><h4>${m.m3}</h4>${ul(m.m3l)}</div>
+  </div><div class="stack">
+   <div class="panel"><h4>${m.m4} (${maxSum})</h4><div class="rub" style="grid-template-columns:minmax(0,1fr) auto">${RUB().map(r=>`<span>${r[1]}</span><b>${r[2]}</b>`).join('')}</div></div>
+   <div class="panel"><h4>${m.m5}</h4><div class="scale">${SCALE.map((s,i)=>`<div><b>${s[1]}</b> · ${s[2].toFixed(2)}<br><span class="muted">${i?`${s[0]}–${SCALE[i-1][0]-1}`:'95–100'}</span></div>`).join('')}</div></div>
+   <div class="panel"><h4>${m.m6}</h4>${linkList(DATA.general[L])}</div>
+  </div></div>`;
+}
+
+/* ---------- events ---------- */
+function flash(msg){ S.toast=msg; render(); setTimeout(()=>{S.toast='';render()},3200); }
+const toastText = () => typeof S.toast==='function' ? S.toast() : S.toast;
+function paintSaving(){ const e=$('#saving'); if(e) e.textContent=savingText(); }
+function savingText(){ return S.saving==='saved'?T().saved:S.saving==='saving'?T().saving:''; }
+function calcTotal(){
+  let tot=0; RUB().forEach(r=>{const el=document.getElementById('r-'+r[0]); if(el&&el.value!=='') tot+=Math.max(0,Math.min(r[2],+el.value||0))});
+  const e=$('#gtot'); if(e) e.textContent=`${tot} ${T().outOf} ${maxSum} · ${letter(tot)[1]}`; return tot;
+}
+document.addEventListener('click',async ev=>{
+  const b=ev.target.closest('[data-act]'); if(!b||b.tagName==='INPUT') return;
+  const a=b.dataset.act, v=b.dataset.v, n=+v, m=T();
+  if(a==='lang'){ L=v; try{localStorage.setItem('srs-lang',L)}catch(_){} render(); }
+  else if(a==='mode'){ flushSave(); S.mode=v; S.tab='plan'; S.task=null; render(); }
+  else if(a==='tab'){ flushSave(); S.tab=v; S.task=null; render(); }
+  else if(a==='open'){ S.task=n; S.tab='plan'; S.step=myTask(n).step||0; render(); window.scrollTo(0,0); }
+  else if(a==='close'){ flushSave(); S.task=null; S.resetAsk=null; render(); }
+  else if(a==='go'){ if(!b.disabled) goStep(n); }
+  else if(a==='profile'){ const nm=$('#f-name').value.trim(); if(!nm){flash(()=>T().enterName);return} const d=myDoc(); d.name=nm; d.group=$('#f-group').value.trim(); persistWork(); render(); }
+  else if(a==='submit'){ patchTask(S.task,{submittedAt:Date.now()},true); render(); flash(()=>T().submitted); }
+  else if(a==='withdraw'){ patchTask(S.task,{submittedAt:null},true); render(); }
+  else if(a==='grade'){ S.mode='teacher'; S.tab='review'; S.review={uid:b.dataset.u,n}; render(); calcTotal(); $('#gp')?.scrollIntoView({block:'nearest'}); }
+  else if(a==='save-grade'){ const {uid,n:k}=S.review; const scores={}; let tot=0; RUB().forEach(r=>{const x=Math.max(0,Math.min(r[2],Math.round(+document.getElementById('r-'+r[0]).value||0)));scores[r[0]]=x;tot+=x});
+    await saveGrade(uid,k,{scores,total:tot,comment:$('#f-comment').value.trim(),returned:false,at:Date.now()}); S.review=null; render(); flash(()=>T().graded2+': '+tot+' · '+letter(tot)[1]); }
+  else if(a==='return'){ const {uid,n:k}=S.review; const c=$('#f-comment').value.trim(); if(!c){flash(()=>T().need);return}
+    await saveGrade(uid,k,{scores:{},total:0,comment:c,returned:true,at:Date.now()}); S.review=null; render(); flash(()=>T().returned2); }
+  else if(a==='csv'){ exportCsv(); }
+  else if(a==='reset-ask'){ S.resetAsk=S.task; render(); }
+  else if(a==='reset-no'){ S.resetAsk=null; render(); }
+  else if(a==='reset-yes'){ const k=S.task; clearTimeout(saveTimer); saveTimer=null; myDoc().tasks[k]={steps:[],forms:[],notes:'',link:'',self:[],step:0,reached:0,submittedAt:null}; S.resetAsk=null; S.step=0; persistWork(); render(); window.scrollTo(0,0); flash(()=>T().rstDone); }
+  else if(a==='docx'){ flushSave(); exportDocx(S.uid,S.task); }
+  else if(a==='docx-t'){ exportDocx(S.review.uid,S.review.n); }
+  else if(a==='img-del'){ const w=myTask(S.task), im=(w.imgs||[]).slice(); im.splice(n,1); patchTask(S.task,{imgs:im}); render(); }
+  else if(a==='row-add'){ const w=myTask(S.task), cfg=TB[S.task], r=tblRows(w,S.task).map(x=>x.slice()); r.push(Array(cfg.cols.length).fill('')); w.tables={...(w.tables||{}),[S.task]:{rows:r}}; scheduleSave(); render(); }
+  else if(a==='row-del'){ const w=myTask(S.task), r=tblRows(w,S.task).map(x=>x.slice()); r.splice(n,1); w.tables={...(w.tables||{}),[S.task]:{rows:r}}; scheduleSave(); render(); }
+  else if(a==='tb-sample'){ const w=myTask(S.task), cfg=TB[S.task]; w.tables={...(w.tables||{}),[S.task]:{rows:cfg.sample.map(r=>r.map(String))}}; scheduleSave(); render(); }
+  else if(a==='tb-clear'){ const w=myTask(S.task), cfg=TB[S.task]; w.tables={...(w.tables||{}),[S.task]:{rows:Array.from({length:5},()=>Array(cfg.cols.length).fill(''))}}; scheduleSave(); render(); }
+});
+document.addEventListener('change',ev=>{
+  const e=ev.target, a=e.dataset?.act;
+  if(a==='form'){ const w=myTask(S.task); const p=(w.forms||[]).slice(); p[+e.dataset.v]=e.checked; patchTask(S.task,{forms:p}); render(); }
+  else if(a==='self'){ const w=myTask(S.task); const p=(w.self||[]).slice(); p[+e.dataset.v]=e.checked; patchTask(S.task,{self:p}); render(); }
+  else if(a==='due'){ S.cfg.deadlines[+e.dataset.v]=e.value; saveCfg(); }
+  else if(a==='ref'){ const w=myTask(S.task); patchTask(S.task,{refs:{...(w.refs||{}),[e.dataset.v]:e.checked}}); }
+  else if(a==='img-file'){ const f=e.files&&e.files[0]; e.value=''; if(!f) return; const w=myTask(S.task); if((w.imgs||[]).length>=3){flash(()=>T().imgMax);return}
+    readImage(f).then(im=>{ if(imgBytes()+im.d.length>650000){flash(()=>T().imgBig);return} patchTask(S.task,{imgs:[...(myTask(S.task).imgs||[]),im]},true); render(); }).catch(()=>flash(()=>T().imgBad)); }
+  else if(a==='sub'){ const w=myTask(S.task), i=+e.dataset.i, sb={...(w.sub||{})}, arr=(sb[i]||[]).slice(); arr[+e.dataset.v]=e.checked; sb[i]=arr; patchTask(S.task,{sub:sb}); render(); }
+});
+document.addEventListener('input',ev=>{
+  const e=ev.target;
+  if(e.id==='f-step'){ const w=myTask(S.task), s=(w.steps||[]).slice(); const k=S.step-2; while(s.length<k) s.push(''); s[k]=e.value; patchTask(S.task,{steps:s}); toggleNext(); }
+  else if(e.id==='f-notes'){ patchTask(S.task,{notes:e.value}); toggleNext(); }
+  else if(e.id==='f-link') patchTask(S.task,{link:e.value});
+  else if(e.id==='f-college'||e.id==='f-teacher'){ myDoc()[e.id==='f-college'?'college':'teacher']=e.value; scheduleSave(); }
+  else if(e.dataset?.act==='img-cap'){ const w=myTask(S.task), im=clone(w.imgs||[]); im[+e.dataset.v].c=e.value; patchTask(S.task,{imgs:im}); }
+  else if(e.dataset?.act==='cell'){ const w=myTask(S.task), cfg=TB[S.task], r=tblRows(w,S.task).map(x=>x.slice()); r[+e.dataset.r][+e.dataset.c]=e.value; w.tables={...(w.tables||{}),[S.task]:{rows:r}}; scheduleSave(); refreshViz(); toggleNext(); }
+  else if(e.dataset?.act==='rub') calcTotal();
+});
+function toggleNext(){ // enable the Next button live while typing, without re-rendering the textarea
+  const t=taskOf(S.task), w=myTask(S.task), ok=stepOk(t,w,S.step), nb=document.querySelector('.nav .btn:not(.ghost)'), hint=document.querySelector('.nav + p.muted');
+  if(nb) nb.disabled=!ok; if(hint) hint.hidden=ok;
+}
+document.addEventListener('focusout',ev=>{ if(['f-step','f-notes','f-link','f-college','f-teacher'].includes(ev.target.id)||ev.target.dataset?.act==='img-cap'||ev.target.dataset?.act==='cell') flushSave(); });
+
+async function exportCsv(){
+  const m=T(), uids=studentUids();
+  const rows=[[m.student1,m.group,...TASKS.map(t=>m.task+' '+t.n),m.avgS,'GPA']];
+  uids.forEach(u=>{const sm=summary(u);rows.push([nameOf(u),S.work[u].group||'',...TASKS.map(t=>{const s=statusOf(u,t.n);return s==='graded'?gradeOf(u,t.n).total:m.st[s]}),sm.avg==null?'':sm.avg.toFixed(0),sm.gpa==null?'':sm.gpa.toFixed(2)])});
+  const csv='﻿'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
+  if(!dl){ flash(()=>T().csvNo); return; }
+  try{ await dl.save({filename:'srs-journal.csv',data:csv}); }catch(e){ if(e&&e.code!=='cancelled') flash(()=>T().csvFail); }
+}
+
+/* ---------- boot ---------- */
+function onOwn(snap){ if(saveTimer) return; S.work[S.uid]=snap.exists?clone(snap.data()):S.work[S.uid]||{name:'',group:'',tasks:{}}; softRender(); }
+function softRender(){ const a=document.activeElement; if(a&&(['f-step','f-notes','f-link','f-name','f-group','f-comment','f-college','f-teacher'].includes(a.id)||a.dataset?.act==='cell'||a.dataset?.act==='img-cap')) return; if(a&&a.dataset?.act==='rub') return; render(); }
+async function boot(){
+  S.sa=true; S.demo=false; S.canEdit=false; S.mode='student'; S.uid='me';
+  try{ const raw=localStorage.getItem('srs-work'); S.work.me=raw?JSON.parse(raw):{name:'',group:'',tasks:{}}; }catch(_){ S.work.me={name:'',group:'',tasks:{}}; }
+  if(!S.work.me.tasks) S.work.me.tasks={};
+  dl={ save:({filename,data})=>new Promise(res=>{ const u=URL.createObjectURL(data instanceof Blob?data:new Blob([data])); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); res({status:'saved'}); }) };
+  render();
+}
+boot();
+</script>
